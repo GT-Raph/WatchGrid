@@ -1,0 +1,55 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}<p class="muted">Investigate confirmed failures and follow their recovery.</p>{% endblock %}
+
+{% block content %}
+<form class="list-filters" method="get">
+  <label class="search-label">
+    Search incidents
+    <input type="search" name="search" value="{{ request.GET.search }}" placeholder="Title or summary">
+  </label>
+  <label>
+    Status
+    <select name="status">
+      <option value="active" {% if selected_status == "active" %}selected{% endif %}>Active</option>
+      <option value="resolved" {% if selected_status == "resolved" %}selected{% endif %}>Resolved</option>
+      <option value="all" {% if selected_status == "all" %}selected{% endif %}>All incidents</option>
+    </select>
+  </label>
+  <button class="button secondary">Filter</button>
+</form>
+
+<section class="panel">
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Incidents">
+    <table>
+      <thead>
+        <tr><th>Incident</th><th>Severity</th><th>Status</th><th>Detected</th><th>Duration</th></tr>
+      </thead>
+      <tbody>
+        {% for incident in rows %}
+          <tr>
+            <td>
+              <a class="row-title" href="{% url 'web:incident-detail' incident.pk %}">{{ incident.title }}</a>
+              <small>{{ incident.project.name }}{% if incident.monitor %}, {{ incident.monitor.name }}{% endif %}</small>
+            </td>
+            <td>{% include "includes/status_badge.html" with value=incident.severity %}</td>
+            <td>{% include "includes/status_badge.html" with value=incident.status %}</td>
+            <td>{{ incident.detected_at|date:"M j, H:i T" }}</td>
+            <td>{{ incident.duration_seconds|duration }}{% if incident.is_active %} <span class="muted">so far</span>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <h3>No incidents found</h3>
+                <p>Confirmed failures appear here with their evidence and recovery history.</p>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% include "includes/pagination.html" %}
+{% endblock %}

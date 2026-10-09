@@ -1,0 +1,12 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}<p class="muted">Copy this key now. Its full value will not be shown again.</p>{% endblock %}
+
+{% block content %}
+<section class="panel form-panel">
+  <label for="new-key">Project key</label>
+  <textarea id="new-key" rows="3" readonly spellcheck="false">{{ raw_key }}</textarea>
+  <p class="muted">Store it in your application's environment variables. Keep it out of browser code and source control.</p>
+  <a class="button" href="{% url 'web:integrations' %}">Done</a>
+</section>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}<p class="muted url">{{ monitor.http_method }} {{ monitor.url }}</p>{% endblock %}
+
+{% block actions %}
+  <a class="button secondary" href="{% url 'web:monitors' %}">All monitors</a>
+  {% if not monitor.archived_at %}
+    {% if capabilities.monitor_manage %}
+      <a class="button secondary" href="{% url 'web:monitor-edit' monitor.pk %}">Edit</a>
+    {% endif %}
+    {% if capabilities.monitor_operate %}
+      <form method="post" action="{% url 'web:monitor-action' monitor.pk 'test' %}">
+        {% csrf_token %}
+        <button class="button secondary">Run check</button>
+      </form>
+      <form method="post" action="{% if monitor.is_active %}{% url 'web:monitor-action' monitor.pk 'pause' %}{% else %}{% url 'web:monitor-action' monitor.pk 'resume' %}{% endif %}">
+        {% csrf_token %}
+        <button class="button">{% if monitor.is_active %}Pause{% else %}Resume{% endif %}</button>
+      </form>
+    {% endif %}
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="detail-status">
+  {% include "includes/status_badge.html" with value=monitor.status %}
+  <span class="muted">Last check {{ monitor.last_checked_at|date:"M j, H:i:s T"|default:"not yet received" }}</span>
+  {% if monitor.archived_at %}<span>Archived</span>{% endif %}
+</div>
+
+<section class="metrics detail-metrics">
+  <div><span>Uptime</span><strong>{{ stats.uptime_percent|percent }}</strong></div>
+  <div><span>Average response</span><strong>{{ stats.latency_ms.avg|default_if_none:"—" }}<small> ms</small></strong></div>
+  <div><span>95th percentile</span><strong>{{ stats.latency_ms.p95|default_if_none:"—" }}<small> ms</small></strong></div>
+  <div><span>Downtime</span><strong>{{ stats.downtime_seconds|duration }}</strong></div>
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Response time</h2>
+      <p class="muted">
+        {{ stats.checks.total }} scheduled checks, {{ stats.checks.failed }} failed, {{ stats.checks.degraded }} degraded.
+        Failed checks are marked in red under the chart.
+      </p>
+    </div>
+    <span class="muted">{{ stats.range.start|date:"M j, H:i" }} – {{ stats.range.end|date:"M j, H:i" }}</span>
+  </div>
+
+  {% if chart.has_data %}
+    <figure class="chart" data-chart="latency-readings">
+      <div class="chart-body">
+        {# The plot is exactly 200px tall, so this label column is drawn 1:1 without stretching. #}
+        <svg class="chart-y" viewBox="0 0 56 {{ chart.height }}" width="56" height="{{ chart.height }}" aria-hidden="true">
+          {% for tick in chart.y_ticks %}<text x="48" y="{{ tick.y }}" text-anchor="end" dominant-baseline="middle">{{ tick.label }}</text>{% endfor %}
+        </svg>
+        <div class="chart-plot" tabindex="0" role="img"
+             aria-label="Response times for the selected period. Average {{ stats.latency_ms.avg }} milliseconds, 95th percentile {{ stats.latency_ms.p95 }} milliseconds. Use the arrow keys to read individual values.">
+          <svg class="latency-chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}" preserveAspectRatio="none" aria-hidden="true">
+            {% for tick in chart.y_ticks %}
+              <line class="chart-grid" x1="0" x2="{{ chart.width }}" y1="{{ tick.y }}" y2="{{ tick.y }}" vector-effect="non-scaling-stroke"/>
+            {% endfor %}
+            {% if chart.threshold %}
+              <line class="chart-threshold" x1="0" x2="{{ chart.width }}" y1="{{ chart.threshold.y }}" y2="{{ chart.threshold.y }}" vector-effect="non-scaling-stroke"/>
+            {% endif %}
+            {% for area in chart.areas %}<path class="chart-area" d="{{ area }}"/>{% endfor %}
+            {% for line in chart.lines %}
+              <polyline class="chart-line" points="{{ line }}" vector-effect="non-scaling-stroke"/>
+            {% endfor %}
+            {% for dot in chart.dots %}
+              <line class="chart-dot" x1="{{ dot.0 }}" y1="{{ dot.1 }}" x2="{{ dot.0 }}" y2="{{ dot.1 }}" vector-effect="non-scaling-stroke"/>
+            {% endfor %}
+          </svg>
+          {% if chart.threshold %}
+            <svg class="chart-annotations" viewBox="0 0 200 {{ chart.height }}" preserveAspectRatio="xMaxYMin meet" aria-hidden="true">
+              <text x="196" y="{{ chart.threshold.y }}" dy="-5" text-anchor="end">Slow above {{ chart.threshold.label }}</text>
+            </svg>
+          {% endif %}
+          <span class="chart-crosshair" hidden></span>
+          <span class="chart-point" hidden></span>
+          <div class="chart-tooltip" role="status" hidden></div>
+        </div>
+      </div>
+      <svg class="chart-failures" viewBox="0 0 {{ chart.width }} 10" preserveAspectRatio="none" aria-hidden="true">
+        {% for x in chart.failures %}<rect x="{{ x }}" y="0" width="3" height="10" rx="1"/>{% endfor %}
+      </svg>
+      <div class="chart-x" aria-hidden="true">
+        {% for tick in chart.x_ticks %}<span>{{ tick.label }}</span>{% endfor %}
+      </div>
+      {{ chart.readings|json_script:"latency-readings" }}
+    </figure>
+
+    <details class="panel-details">
+      <summary>Response-time data</summary>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Time</th><th>Response time (ms)</th></tr></thead>
+          <tbody>
+            {% for point in series.points %}
+              <tr>
+                <td>{{ point.t|date:"M j, H:i:s T" }}</td>
+                <td>{{ point.response_time_ms|default_if_none:"No response" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  {% else %}
+    <div class="empty-inline">
+      <strong>No latency data in this period</strong>
+      <span>Scheduled checks will appear here once the monitoring worker runs.</span>
+    </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <h2>Check history</h2>
+    <span class="muted">Newest first, {{ rows.paginator.count }} checks</span>
+  </div>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Check history">
+    <table>
+      <thead>
+        <tr><th>Checked at</th><th>Outcome</th><th>Kind</th><th>HTTP</th><th>Response</th><th>Evidence</th></tr>
+      </thead>
+      <tbody>
+        {% for check in rows %}
+          <tr>
+            <td>{{ check.checked_at|date:"M j, H:i:s" }}</td>
+            <td>{% include "includes/status_badge.html" with value=check.outcome %}</td>
+            <td>{{ check.kind|label }}</td>
+            <td>{{ check.status_code|default_if_none:"—" }}</td>
+            <td>{% if check.response_time_ms is not None %}{{ check.response_time_ms }} ms{% else %}—{% endif %}</td>
+            <td class="wrap-cell">{{ check.error_message|default:check.error_category|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">No checks recorded in this period.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "includes/pagination.html" %}
+</section>
+
+<div class="two-columns">
+  <section class="panel">
+    <div class="panel-heading"><h2>Configuration</h2></div>
+    <dl class="facts">
+      <div><dt>Project</dt><dd>{{ monitor.project.name }}</dd></div>
+      <div><dt>Check interval</dt><dd>{{ monitor.interval_seconds }} seconds</dd></div>
+      <div><dt>Timeout</dt><dd>{{ monitor.timeout_seconds }} seconds</dd></div>
+      <div><dt>Expected HTTP status</dt><dd>{{ monitor.expected_status }}</dd></div>
+      <div><dt>Slow above</dt><dd>{% if monitor.response_time_threshold_ms %}{{ monitor.response_time_threshold_ms }} ms{% else %}No threshold{% endif %}</dd></div>
+      <div><dt>Failure / recovery threshold</dt><dd>{{ monitor.failure_threshold }} / {{ monitor.recovery_threshold }} checks</dd></div>
+      <div><dt>TLS expiry</dt><dd>{{ monitor.tls_expires_at|date:"M j, Y"|default:"Not available" }}</dd></div>
+    </dl>
+    {% if capabilities.monitor_manage and not monitor.archived_at %}
+      <div class="panel-note">
+        <a class="danger-link" href="{% url 'web:monitor-action' monitor.pk 'archive' %}">Archive monitor</a>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading"><h2>Recent incidents</h2></div>
+    {% for incident in incidents %}
+      <div class="list-item">
+        <a href="{% url 'web:incident-detail' incident.pk %}">{{ incident.title }}</a>
+        {% include "includes/status_badge.html" with value=incident.status %}
+      </div>
+    {% empty %}
+      <div class="empty-inline">No incidents for this monitor.</div>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

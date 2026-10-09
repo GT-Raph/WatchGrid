@@ -1,0 +1,90 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}<p class="muted">Track availability and response times across your services.</p>{% endblock %}
+
+{% block actions %}
+  {% if capabilities.monitor_manage %}
+    <a class="button" href="{% url 'web:monitor-new' %}">{% icon "plus" %}Add monitor</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<form class="list-filters" method="get">
+  <label class="search-label">
+    Search monitors
+    <input type="search" name="search" placeholder="Name or URL" value="{{ request.GET.search }}">
+  </label>
+  <label>
+    Status
+    <select name="status">
+      <option value="">All statuses</option>
+      {% for value, name in status_choices %}
+        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    Sort by
+    <select name="sort">
+      <option value="name">Name</option>
+      <option value="status" {% if request.GET.sort == "status" %}selected{% endif %}>Most urgent first</option>
+      <option value="recent" {% if request.GET.sort == "recent" %}selected{% endif %}>Last check</option>
+    </select>
+  </label>
+  <button class="button secondary">Filter</button>
+</form>
+
+<section class="panel">
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Monitors">
+    <table>
+      <thead>
+        <tr>
+          <th>Monitor</th>
+          <th>Status</th>
+          <th>Recent checks</th>
+          <th class="numeric">24h uptime</th>
+          <th class="numeric">Last response</th>
+          <th>Last checked</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for monitor in rows %}
+          <tr>
+            <td>
+              <a class="row-title" href="{% url 'web:monitor-detail' monitor.pk %}">{{ monitor.name }}</a>
+              <small class="url">{{ monitor.url }}</small>
+            </td>
+            <td>{% include "includes/status_badge.html" with value=monitor.status %}</td>
+            <td>
+              <div class="health-strip compact">
+                {% for check in monitor.recent %}
+                  <span class="cell {% if check.outcome == 'success' %}good{% elif check.outcome == 'failure' %}failure{% elif check.outcome == 'degraded' %}degraded{% else %}empty{% endif %}"
+                        title="{{ check.t|date:'M j, H:i:s' }}: {{ check.outcome|label }}"
+                        role="img" aria-label="{{ check.outcome|label }}"></span>
+                {% empty %}
+                  <span class="muted">Awaiting checks</span>
+                {% endfor %}
+              </div>
+            </td>
+            <td class="numeric">{{ monitor.uptime|percent }}</td>
+            <td class="numeric">
+              {% if monitor.last_response_time_ms is not None %}{{ monitor.last_response_time_ms }} ms{% else %}—{% endif %}
+            </td>
+            <td>{{ monitor.last_checked_at|date:"M j, H:i:s"|default:"Never" }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <h3>No monitors found</h3>
+                <p>Add a monitor or adjust your filters.</p>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% include "includes/pagination.html" %}
+{% endblock %}

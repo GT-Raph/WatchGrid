@@ -1,0 +1,11 @@
+<section class="metrics" aria-label="Health summary">
+  <div><span>Total monitors</span><strong>{{ summary.monitors.total }}</strong></div>
+  <div><span>Operational</span><strong class="good-text">{{ summary.monitors.operational }}</strong></div>
+  <div><span>Degraded</span><strong>{{ summary.monitors.degraded }}</strong></div>
+  <div>
+    <span>Down</span>
+    <strong class="{% if summary.monitors.down %}critical-text{% endif %}">{{ summary.monitors.down }}</strong>
+  </div>
+  <div><span>Active incidents</span><strong>{{ summary.incidents.active }}</strong></div>
+  <div><span>Uptime</span><strong class="metric-uptime">{{ summary.uptime_percent|percent }}</strong></div>
+</section>

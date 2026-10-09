@@ -1,0 +1,136 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}<p class="muted">Connect application errors, route alerts, and plan maintenance.</p>{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Project keys</h2>
+      <p class="muted">Send application errors to <code>/api/v1/events/errors/</code> with a Bearer project key.</p>
+    </div>
+    {% if capabilities.apikey_manage %}
+      <a class="button secondary" href="{% url 'web:key-new' %}">Create key</a>
+    {% endif %}
+  </div>
+  {% if capabilities.apikey_view %}
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Project</th><th>Key prefix</th><th>Status</th><th>Last used</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          {% for key in keys %}
+            <tr>
+              <td>{{ key.name }}</td>
+              <td>{{ key.project.name }}</td>
+              <td><code>{{ key.key_prefix }}…</code></td>
+              <td>{% if key.revoked_at %}Revoked{% else %}Active{% endif %}</td>
+              <td>{{ key.last_used_at|date:"M j, H:i"|default:"Never" }}</td>
+              <td>
+                {% if capabilities.apikey_manage and not key.revoked_at %}
+                  <a class="danger-link" href="{% url 'web:key-revoke' key.pk %}">Revoke</a>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6">No project keys yet. Create one to connect your application.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <details class="panel-details">
+      <summary>Error ingestion example</summary>
+      <pre class="evidence">POST /api/v1/events/errors/
+Authorization: Bearer YOUR_PROJECT_KEY
+Content-Type: application/json
+
+{"error_type": "RuntimeError", "message": "Payment failed", "environment": "production"}</pre>
+    </details>
+  {% else %}
+    <div class="empty-inline">
+      Your role does not include access to project keys. Ask an owner or administrator for help.
+    </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Alert policies</h2>
+      <p class="muted">Choose the events and destinations that matter to your team.</p>
+    </div>
+    {% if capabilities.alertpolicy_manage %}
+      <a class="button secondary" href="{% url 'web:notification-new' 'policies' %}">Create policy</a>
+    {% endif %}
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Policy</th><th>Project</th><th>Scope</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for policy in policies %}
+          <tr>
+            <td>{{ policy.name }}</td>
+            <td>{{ policy.project.name }}</td>
+            <td>{{ policy.monitor.name|default:"All project monitors" }}</td>
+            <td>{{ policy.enabled|yesno:"Enabled,Disabled" }}</td>
+            <td>
+              <div class="row-actions">
+                {% if capabilities.alertpolicy_manage %}
+                  <a href="{% url 'web:notification-edit' 'policies' policy.pk %}">Edit</a>
+                {% endif %}
+                {% if capabilities.alertpolicy_delete %}
+                  <a class="danger-link" href="{% url 'web:notification-delete' 'policies' policy.pk %}">Delete</a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">No policies in this scope.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Maintenance windows</h2>
+      <p class="muted">Checks continue; normal outage notifications are suppressed.</p>
+    </div>
+    {% if capabilities.maintenance_manage %}
+      <a class="button secondary" href="{% url 'web:notification-new' 'maintenance' %}">Schedule maintenance</a>
+    {% endif %}
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Title</th><th>Project</th><th>Starts</th><th>Ends</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for window in windows %}
+          <tr>
+            <td>{{ window.title }}</td>
+            <td>{{ window.project.name }}</td>
+            <td>{{ window.starts_at|date:"M j, H:i T" }}</td>
+            <td>{{ window.ends_at|date:"M j, H:i T" }}</td>
+            <td>
+              {% if capabilities.maintenance_manage %}
+                <div class="row-actions">
+                  <a href="{% url 'web:notification-edit' 'maintenance' window.pk %}">Edit</a>
+                  <a class="danger-link" href="{% url 'web:notification-delete' 'maintenance' window.pk %}">Delete</a>
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">No maintenance scheduled.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

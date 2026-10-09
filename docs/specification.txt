@@ -1,0 +1,2350 @@
+
+PAGE 1
+FINAL PROJECT & TECHNICAL DOCUMENTATION
+Python · Django Implementation
+Web and Application
+Monitoring Platform
+Full Project Documentation and Technical Specification
+UPTIME · LAST 0 CHECKS Operational
+RESPONSE TIME (ms) p50 · 281 ms
+DOCUMENT VERSION
+1.0  Final Specification
+DATE
+7 October 202
+PRIMARY BACKEND
+Python / Django / Django REST Framework
+PURPOSE
+Development, implementation, testing,
+deployment and operations
+CONFIDENTIAL DEVELOPMENT DOCUMENT
+
+PAGE 2
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+2 / 52Confidential development document
+Document Control
+FIELD VALUE
+DOCUMENT TITLE Web and Application Monitoring Platform  Full Project Documentation and Technical
+Specification
+VERSION 1.0
+STATUS Final baseline for implementation
+OWNER Project Sponsor / Product Owner
+PRIMARY AUDIENCE Project sponsor, product owner, backend engineers, frontend engineers, DevOps/SRE,
+QA, security reviewers
+TECHNOLOGY BASELINE Python, Django, Django REST Framework, PostgreSQL, Celery, Redis, Nginx,
+Gunicorn, Docker
+CHANGE CONTROL Any material scope, security, architecture or data-model change must be captured
+through an approved change request or architecture decision record.
+Revision History
+VERSION DATE DESCRIPTION STATUS
+0.1 7 Oct 202 Initial combined project and technical specification Draft
+1.0 7 Oct 202 Final baseline specification for development Approved baseline
+How to Use This Document
+This document is the implementation baseline for the platform. Part I defines the project, scope, users,
+requirements, governance and delivery methodology. Part II defines the technical architecture and detailed
+engineering requirements. Part III defines quality assurance, deployment, operations and delivery controls.
+Appendices provide reference material for the development team.
+PART I
+Project documentation
+Scope, users,
+requirements, governance
+PART II
+Technical
+documentation
+Architecture & engineering
+requirements
+PART III
+Quality, delivery & ops
+QA, deployment,
+operations, controls
+APPENDICES
+Reference material
+API, env vars, status rules,
+glossary
+IMPLEMENTATION RULE
+Where this document uses MUST or SHALL, the requirement is mandatory for the initial production
+release unless a formally approved change states otherwise. SHOULD indicates a preferred
+implementation that may be adjusted with technical justification.
+
+PAGE 3
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+3 / 52Confidential development document
+Contents
+PART I — PROJECT DOCUMENTATION 
+ Executive Summary 
+ Project Background and Problem Statement 
+ Vision, Goals and Success Criteria 
+ Scope 
+ Stakeholders and User Personas 
+ Delivery Methodology and Governance 
+ Functional Requirements 
+ Non-Functional Requirements 
+ Business Rules 
+ Roles and Permissions 
+ User Stories and Acceptance Criteria 
+PART II — TECHNICAL DOCUMENTATION 
+ Solution Architecture 
+ Component Design 
+ Monitoring Engine Design 
+ Incident and Recovery Design 
+ Application Error Monitoring 
+ Notification and Escalation Design 
+ Data Architecture and ERD 
+ Django Domain Model Specification 
+ API Specification 
+ Frontend and UX Specification 
+ Security Architecture 
+ Multi-Tenancy and Data Isolation 
+ Performance, Scalability and Retention 
+ Infrastructure and Deployment 
+ Platform Observability 
+PART III — QUALITY, DELIVERY AND
+OPERATIONS
+
+ Testing Strategy 
+ CI/CD and Release Management 
+ Backup and Disaster Recovery 
+ Operational Runbook 
+ Coding Standards and Repository Structure 
+ Development Roadmap 
+ Risk Register 
+ Definition of Done and Final Acceptance 
+ Future Enhancements 
+APPENDICES 
+A  API Response Examples 
+B  Environment Variables 
+C  Status Rules Summary 
+D  Glossary 
+E  Implementation Checklist 
+Final Statement 
+
+PAGE 4
+PART I
+Project Documentation
+This part defines why the platform is being built, the users it serves,
+the required capabilities, scope boundaries, delivery method and
+acceptance criteria.
+ Executive Summary
+ Project Background and Problem
+Statement
+ Vision, Goals and Success Criteria
+ Scope
+ Stakeholders and User Personas
+ Delivery Methodology and
+Governance
+ Functional Requirements
+ Non-Functional Requirements
+ Business Rules
+ Roles and Permissions
+ User Stories and Acceptance
+Criteria
+
+PAGE 5
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+5 / 52Confidential development document
+Executive Summary
+The Web and Application Monitoring Platform is a centralized reliability-monitoring system for
+websites, web applications and APIs. Once a user registers a monitored target, the platform
+automatically performs scheduled checks in the background. The user does not need to keep the
+dashboard open. The platform records availability, latency and failure data; detects confirmed
+outages; creates and resolves incidents; and sends alerts according to configured policies.
+For applications owned or developed by the customer, the platform also supports application-level error
+ingestion. This enables the platform to answer two separate questions: Is the service reachable, and is the
+application actually working correctly for users? By combining external uptime checks with internal error
+telemetry, the system can detect downtime, degraded performance, failed features, exceptions and user-
+impacting issues from one dashboard.
+QUESTION 1
+Is the service reachable?
+External uptime checks · latency · status codes · TLS
+QUESTION 2
+Is the application actually working for
+users?
+Application error ingestion · grouping · affected users
+The initial release will be implemented with Python and Django, Django REST Framework for APIs, PostgreSQL
+for durable relational data, Celery for asynchronous work, Redis for job brokering and caching, and
+Nginx/Gunicorn for production serving. The architecture is intentionally modular so it can grow from a single-
+region MVP to a multi-region monitoring service without rewriting the core domain model.
+Django
+Core framework
+DRF
+REST APIs
+PostgreSQL
+Durable data
+Celery
+Async work
+Redis
+Broker · cache
+Nginx +
+Gunicorn
+Serving
+CORE PRODUCT PRINCIPLE
+Monitoring is server-driven and continuous. Closing the browser, logging out, or shutting down the
+user device does not stop monitoring. The monitoring scheduler and worker processes run
+independently on the platform infrastructure.
+Project Background and Problem Statement
+ Background
+Businesses increasingly depend on websites, internal systems, APIs and cloud services for sales, accounting,
+operations, customer service and communication. A service can become fully unavailable, partially unavailable
+01
+02
+
+PAGE 6
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+6 / 52Confidential development document
+or technically reachable while important user actions are failing. Manual checking does not provide reliable
+detection, historical evidence or rapid incident response.
+ Problem Statement
+Developers and administrators often discover outages only after users report them. Manual monitoring becomes
+impractical as the number of applications grows. A simple HTTP 200 response is also insufficient to prove that
+login, database access, payments, background jobs or other critical functions are healthy. The project therefore
+requires a monitoring platform that runs continuously, distinguishes availability from application health, records
+evidence, reduces false alarms and notifies responsible teams quickly.
+ Proposed Solution
+Vision, Goals and Success Criteria
+ Vision
+Provide one trustworthy place where a developer or organization can see the
+health of every important digital system, understand what failed, know who is
+affected and receive actionable alerts without manually checking each service.
+ Project Goals
+G-01
+Automate service availability
+monitoring
+SUCCESS INDICATOR
+Registered monitors execute without
+browser involvement and persist
+results.
+G-02
+Detect meaningful incidents
+quickly
+SUCCESS INDICATOR
+Confirmed failures create incidents
+within configured thresholds.
+G-03
+Reduce false alarms
+SUCCESS INDICATOR
+Retries and confirmation thresholds
+prevent single transient failures from
+declaring an outage.
+A central dashboard for organizations, projects, monitors, incidents, errors and reports.✓
+Automatic scheduled monitoring of HTTP/HTTPS sites, APIs and health endpoints.✓
+Configurable status-code expectations, timeouts, performance thresholds and response assertions.✓
+Confirmed outage logic using consecutive failure thresholds to reduce false positives.✓
+Automatic recovery logic and incident resolution after consecutive successful checks.✓
+Application error ingestion for software owned by the customer.✓
+Email alerts in the MVP, with extensible channels for SMS, WhatsApp, Slack, Teams and webhooks.✓
+Historical uptime, response-time and incident reporting.✓
+Security controls that prevent abuse of the monitoring infrastructure, especially SSRF.✓
+0
+
+PAGE 7
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+7 / 52Confidential development document
+G-04
+Provide useful historical
+evidence
+SUCCESS INDICATOR
+Users can review uptime, latency,
+incident duration and error history.
+G-05
+Support user-impact visibility
+SUCCESS INDICATOR
+Integrated applications can report
+grouped errors and unique affected-
+user counts.
+G-06
+Remain secure and scalable
+SUCCESS INDICATOR
+Tenant isolation, SSRF protection,
+rate limits, queues, indexes and
+retention controls are implemented.
+ MVP Success Criteria
+Scope
+ In Scope for MVP
+AREA INCLUDED CAPABILITIES
+Accounts Registration, login, logout, password reset, email verification, profile management.
+Organizations Organization creation, membership and role management.
+Projects Create, update, archive and view monitored application projects.
+Monitors HTTP/HTTPS/API/health endpoint monitors; interval, timeout, expected status and
+threshold configuration.
+Monitoring Automatic Celery-based scheduling and execution; latency, status and failure recording.
+Incidents Open, acknowledge, investigate, monitor, resolve; automatic creation and recovery.
+Notifications Email alerts, recovery alerts, retry and deduplication.
+Analytics Current status, uptime percentage, latency, incident history and basic time filters.
+Error monitoring Secure ingestion endpoint, error grouping/fingerprinting, occurrence count and affected-
+user estimate.
+A user can create an account, organization, project and monitor.✓
+The platform automatically checks active monitors at their configured intervals.✓
+Check results include timestamp, success/failure, HTTP status where available, and response time.✓
+The platform correctly transitions a monitor through operational, pending failure, down, recovering and
+operational states.
+✓
+A confirmed failure creates a single active incident; continuing failures do not create duplicate incidents.✓
+Recovery closes the incident automatically and sends a recovery notification when configured.✓
+The dashboard displays current status, uptime, recent incidents and response-time history.✓
+The API enforces organization-level access controls and rejects unauthorized cross-tenant access.✓
+Monitoring targets are validated to prevent access to prohibited private and metadata network ranges.✓
+0
+
+PAGE 8
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+8 / 52Confidential development document
+AREA INCLUDED CAPABILITIES
+Administration Django admin and platform controls for authorized administrators.
+Security RBAC, tenant isolation, SSRF controls, secrets handling, validation, throttling and audit
+logs.
+ Out of Scope for MVP
+ Future Scope
+Multi-region probes Public status pages and custom domains SMS/WhatsApp/Slack/Teams integrations
+Mobile and language SDKs Cron/job heartbeat monitoring TCP/DNS/WebSocket monitors
+Synthetic user journeys Release/deployment correlation
+AI-assisted incident summarization and root-cause suggestions
+Stakeholders and User Personas
+STAKEHOLDER INTEREST / RESPONSIBILITY
+Project Sponsor Funds and approves scope, priorities and final acceptance.
+Product Owner Owns requirements, prioritization, acceptance criteria and roadmap.
+Backend Engineers Implement Django domain logic, APIs, Celery workflows and integrations.
+Frontend Engineers Implement dashboards, forms, charts, status views and responsive UX.
+DevOps / SRE Deploy infrastructure, observability, backups, scaling and recovery procedures.
+QA Engineers Verify functional, integration, security, load and regression requirements.
+Security Reviewer Reviews authentication, authorization, tenant isolation, SSRF and data handling.
+Customer Organization Owner Configures projects, team members, monitors and alert policies.
+Native mobile SDKs beyond a basic HTTP ingestion API.×
+Full distributed tracing and infrastructure APM comparable to enterprise observability suites.×
+Synthetic browser transactions with full headless-browser scripting.×
+Monitoring of private internal networks without a separately deployed private probe/agent.×
+Automated remediation that changes production systems without human authorization.×
+Complex subscription billing; billing may be added after core monitoring is stable.×
+Multi-region probe execution in the first release; the architecture will allow it later.×
+05
+
+PAGE 9
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+9 / 52Confidential development document
+STAKEHOLDER INTEREST / RESPONSIBILITY
+Developer / Operator Uses incidents and errors to diagnose and resolve issues.
+Viewer / Manager Reads service health and reports without configuration rights.
+Delivery Methodology and Governance
+ Methodology
+The project will use an Agile, incremental delivery approach. Work is divided into vertical slices that produce
+usable system behavior rather than isolated technical layers. Each iteration must produce tested functionality
+that can run in a staging environment. Requirements are baselined in this document but may be refined through
+controlled backlog changes.
+ Delivery Cycle
+ Governance
+DECISION AREA OWNER REQUIRED RECORD
+Product scope and priority Product Owner / Sponsor Backlog + approval
+Architecture or technology change Technical Lead Architecture Decision Record ADR
+Database breaking change Technical Lead  DBA/DevOps Migration plan + rollback plan
+Security-sensitive change Security reviewer  Technical Lead Threat review / security checklist
+Production release Product Owner  Technical Lead Release record and deployment
+result
+Emergency hotfix Technical Lead / on-call Hotfix PR  post-release review
+0
+Plan
+Confirm sprint goals,
+acceptance criteria,
+dependencies and
+technical decisions.
+1 Design
+Update diagrams, models,
+API contracts and threat
+considerations for the
+selected work.
+2 Implement
+Develop on feature
+branches with local tests
+and migrations.
+ Review
+Perform pull-request
+review, static checks,
+automated tests and
+security review where
+relevant.
+
+Integrate
+Merge to the shared
+branch and deploy
+automatically to staging.
+5 Verify
+QA validates acceptance
+criteria, regression
+behavior and operational
+telemetry.
+ Release
+Approved changes are
+promoted to production
+using the documented
+release process.
+7 Learn
+Incidents, metrics and
+feedback are used to
+prioritize the next
+iteration.
+8
+
+PAGE 10
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+10 / 52Confidential development document
+Functional Requirements
+0functional requirements 25
+Must  mandatory for
+MVP 5 Should preferred
+ID REQUIREMENT DESCRIPTION PRIORITY
+FR-AUTH-001 Account registration The system shall allow a new user to register using a
+unique email address and password.
+Must
+FR-AUTH-002 Authentication The system shall authenticate users and maintain secure
+sessions or API tokens.
+Must
+FR-AUTH-003 Password recovery The system shall support password reset using a time-
+limited recovery flow.
+Must
+FR-ORG-001 Organization creation An authenticated user shall be able to create an
+organization and become its owner.
+Must
+FR-ORG-002 Membership Authorized users shall invite, remove and assign roles to
+organization members.
+Must
+FR-PROJ-001 Project management Authorized users shall create, edit, archive and view
+projects.
+Must
+FR-MON-001 Monitor creation Authorized users shall create HTTP/HTTPS/API/health
+monitors for a project.
+Must
+FR-MON-002 Monitor configuration A monitor shall store URL, method, interval, timeout,
+expected status, thresholds and active state.
+Must
+FR-MON-003 Automatic execution Active monitors shall run automatically when due,
+independent of any open browser session.
+Must
+FR-MON-004 Manual test Authorized users shall be able to run a non-scheduled test
+check without changing normal cadence.
+Should
+FR-MON-005 Pause/resume Authorized users shall pause and resume monitoring
+without deleting configuration.
+Must
+FR-CHK-001 Check recording Every executed probe shall produce a durable check
+result unless an infrastructure failure prevents
+persistence.
+Must
+FR-CHK-002 Latency Successful and failed network checks shall record
+duration where measurable.
+Must
+FR-CHK-003 Response validation The monitor shall evaluate expected HTTP status and
+optional response assertions.
+Should
+FR-CHK-004 TLS information HTTPS monitors shall record certificate validity and
+expiration information.
+Should
+07
+
+PAGE 11
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+11 / 52Confidential development document
+ID REQUIREMENT DESCRIPTION PRIORITY
+FR-INC-001 Failure confirmation The system shall require configurable consecutive failures
+before confirming an outage.
+Must
+FR-INC-002 Incident creation A confirmed failure shall create or update one active
+incident for the failure condition.
+Must
+FR-INC-003 Recovery
+confirmation
+The system shall require configurable successful checks
+before automatic recovery.
+Must
+FR-INC-004 Incident lifecycle Incidents shall support open, acknowledged,
+investigating, monitoring and resolved states.
+Must
+FR-NOT-001 Email alert A configured confirmed incident shall trigger an email
+alert.
+Must
+FR-NOT-002 Recovery alert A configured resolved incident shall trigger a recovery
+alert.
+Must
+FR-NOT-003 Deduplication The system shall suppress duplicate alerts for the same
+incident according to policy.
+Must
+FR-ERR-001 Error ingestion Integrated applications shall be able to POST error events
+using a project credential.
+Must
+FR-ERR-002 Error grouping Equivalent errors shall be grouped using a deterministic
+fingerprint strategy.
+Must
+FR-ERR-003 Affected users The system shall estimate unique affected users using a
+non-sensitive stable reference where provided.
+Should
+FR-ANA-001 Dashboard The dashboard shall display monitor counts by status,
+active incidents and basic reliability metrics.
+Must
+FR-ANA-002 History Users shall view monitor check history and incident
+history for authorized projects.
+Must
+FR-ANA-003 Time filters Analytics shall support common ranges such as 2 hours,
+7 days, 0 days and custom range.
+Should
+FR-AUD-001 Audit logging Security-sensitive configuration changes shall create
+audit records.
+Must
+FR-ADM-001 Platform
+administration
+Authorized platform administrators shall manage users,
+organizations and operational settings.
+Must
+
+PAGE 12
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+12 / 52Confidential development document
+Non-Functional Requirements
+ID CATEGORY REQUIREMENT
+NFR-AV-001 Availability Production API target availability should be at least .%, excluding
+approved maintenance.
+NFR-PERF-001 API latency Typical authenticated read endpoints should respond within 500 ms at
+normal load, excluding large report generation.
+NFR-PERF-002 Scheduling delay Due monitor tasks should normally be queued within 0 seconds of
+next_check_at.
+NFR-SCALE-001 Horizontal scale Monitoring workers shall support horizontal scaling without duplicate
+execution of the same check.
+NFR-SEC-001 Transport security All production user and API traffic shall use HTTPS.
+NFR-SEC-002 Tenant isolation Every tenant-scoped query shall be constrained to organizations
+accessible to the requesting user.
+NFR-SEC-003 SSRF prevention User-configured monitoring URLs shall be validated and blocked from
+prohibited address ranges and unsafe schemes.
+NFR-SEC-004 Secrets Passwords, API secrets and infrastructure credentials shall never be
+logged in plaintext.
+NFR-DATA-001 Integrity Relational constraints and transactions shall protect critical incident
+and ownership relationships.
+NFR-DATA-002 Retention High-volume raw check and error data shall follow documented
+retention and aggregation policies.
+NFR-OPS-001 Observability Django, Celery, Redis, PostgreSQL and queue health shall be
+monitored independently.
+NFR-OPS-002 Backups Production PostgreSQL shall be backed up automatically and
+restoration shall be tested.
+NFR-UX-001 Responsive UI Core dashboard and incident views shall be usable on current desktop
+and mobile browsers.
+NFR-MAINT-001 Maintainability The codebase shall use modular Django apps, automated tests, type-
+aware linting and documented APIs.
+Business Rules
+RULE DEFINITION
+BR-001 Only active monitors are eligible for scheduled checks.
+08
+0
+
+PAGE 13
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+13 / 52Confidential development document
+RULE DEFINITION
+BR-002 A single failed probe does not declare downtime unless the monitor failure threshold is one.
+BR-003 Only one active incident may exist for the same monitor and primary failure category unless a future
+correlation model explicitly allows multiple concurrent incident types.
+BR-004 A monitor marked DOWN remains down until the configured recovery success threshold is reached.
+BR-005 Pausing a monitor stops scheduled checks and normal outage alerts; it does not delete historical data.
+BR-006 Maintenance windows suppress normal incident alerting for expected downtime but checks may
+continue for audit purposes.
+BR-007 Project-scoped ingestion keys may submit events only to their own project.
+BR-008 User references in error events should be hashed or pseudonymous and must not contain passwords or
+payment-card information.
+BR-009 Deleting a project should be a controlled soft-delete/archive operation in the MVP unless retention
+policy permits hard deletion.
+BR-010 All timestamps shall be stored in UTC and converted to the viewer timezone at presentation time.
+Roles and Permissions
+ Roles
+Platform Super
+Administrator
+Cross-tenant
+platform operations;
+tightly restricted.
+Organization
+Owner
+Full control of own
+organization,
+members, projects,
+monitors and
+policies.
+Organization
+Administrator
+Operational
+configuration and
+team administration
+except
+ownership/billing-
+sensitive actions.
+Developer
+Monitor, incident and
+integration
+management within
+assigned
+organization.
+Viewer
+Read-only access to
+authorized
+dashboards,
+monitors, incidents
+and reports.
+ Permission Matrix
+CAPABILITY OWNER ADMIN DEVELOPER VIEWER
+View organization Yes Yes Yes Yes
+Manage organization settings Yes Yes No No
+Manage members Yes Yes No No
+Create/edit projects Yes Yes Limited No
+Delete/archive projects Yes Yes No No
+10
+
+PAGE 14
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+14 / 52Confidential development document
+CAPABILITY OWNER ADMIN DEVELOPER VIEWER
+Create/edit monitors Yes Yes Yes No
+Pause/resume monitors Yes Yes Yes No
+View checks/incidents Yes Yes Yes Yes
+Acknowledge/resolve incidents Yes Yes Yes No
+Manage API keys Yes Yes Yes No
+Manage alert policies Yes Yes Limited No
+View audit log Yes Yes Limited No
+User Stories and Acceptance Criteria
+US-001 As an organization owner, I want to add a
+website monitor so the platform checks it
+automatically.
+ACCEPTANCE
+Given an authorized user and valid public URL, when
+the monitor is saved, it receives next_check_at and
+becomes eligible for automatic checks without the
+dashboard being open.
+US-002 As a developer, I want transient failures
+retried so I am not alerted for one
+temporary network error.
+ACCEPTANCE
+A single failure increments the failure counter; DOWN
+is declared only when the configured threshold is
+reached.
+US-003 As an operator, I want one incident per
+outage so repeated checks do not flood
+the incident list.
+ACCEPTANCE
+While an active incident exists for the monitor/failure
+category, additional failed checks update that
+incident instead of creating duplicates.
+US-004 As an operator, I want recovery detected
+automatically.
+ACCEPTANCE
+After the configured number of consecutive
+successful checks, the incident is resolved and the
+monitor returns to OPERATIONAL.
+US-005 As a developer, I want my application to
+send exceptions to the platform.
+ACCEPTANCE
+A valid project key can submit an event;
+invalid/revoked keys are rejected; accepted events
+are normalized and grouped.
+11
+
+PAGE 15
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+15 / 52Confidential development document
+US-006 As a manager, I want to know historical
+uptime.
+ACCEPTANCE
+The project or monitor dashboard shows uptime for a
+selected period based on incident duration or check
+data according to the defined calculation method.
+US-007 As an organization owner, I want my data
+isolated from other customers.
+ACCEPTANCE
+Requests attempting to access another organization
+resource return not found or forbidden and do not
+disclose cross-tenant metadata.
+US-008 As an administrator, I want to pause
+monitoring during planned work.
+ACCEPTANCE
+Paused monitors do not run scheduled checks until
+resumed; history is retained.
+
+PAGE 16
+PART II
+Technical Documentation
+This part is the engineering specification. It defines the runtime
+architecture, Django domain model, worker behavior, API contracts,
+security controls, deployment topology and scalability rules.
+ Solution Architecture
+ Component Design
+ Monitoring Engine Design
+ Incident and Recovery Design
+ Application Error Monitoring
+ Notification and Escalation Design
+ Data Architecture and ERD
+ Django Domain Model Specification
+ API Specification
+ Frontend and UX Specification
+ Security Architecture
+ Multi-Tenancy and Data Isolation
+ Performance, Scalability and
+Retention
+ Infrastructure and Deployment
+ Platform Observability
+
+PAGE 17
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+17 / 52Confidential development document
+Solution Architecture
+ Architectural Style
+The initial system uses a modular monolith for the control plane combined with asynchronous worker processes
+for monitoring and event processing. Django and Django REST Framework form the control-plane API. Celery
+workers form the execution plane. Redis is the broker/cache. PostgreSQL is the authoritative relational database.
+This keeps the first release operationally manageable while preserving clean domain boundaries that can later
+be extracted into services if scale requires it.
+CLIENT
+CONTROL PLANE
+EXECUTION PLANE
+EXTERNAL & DATA
+Users / Developers
+Web Dashboard
+React / Next.js or Django Templates
+Nginx
+Reverse proxy · TLS
+Django  Django REST Framework
+Auth · Organizations · Projects · Incidents · APIs
+Celery Beat
+Scheduler
+Error Ingestion API
+/api/v1/events/errors/
+Redis
+Broker · Cache
+Rate limits
+Celery Workers
+Monitoring · Notifications
+Analytics · Maintenance
+PostgreSQL
+System of record
+Monitored Targets
+Websites · APIs · Web apps
+Notification Providers
+Email · SMS · WhatsApp · Webhooks
+Customer Applications
+Owned apps reporting errors
+HTTPS
+enqueue due checks
+tasks
+ read / write
+HTTP probes
+alerts
+ errors
+same customer systems
+FIGURE 1 High-level logical architecture
+ Architecture Principles
+01 Server-side execution
+Monitoring must never depend on a browser timer or
+user session.
+02 Asynchronous execution
+Network probes and notification sends run outside web
+request workers.
+12
+
+PAGE 18
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+18 / 52Confidential development document
+0 Idempotency
+Retried background work must not create duplicate
+checks, incidents or notifications.
+0 Tenant isolation by default
+Organization scope is applied at queryset/service
+boundaries.
+05 Fail safely
+Platform infrastructure errors must not be misreported as
+target downtime without classification.
+0 Observable components
+Queue delay, worker heartbeat, database health and
+scheduler health are monitored.
+07 Secure target resolution
+DNS/IP validation is performed before and during
+network access to reduce SSRF and DNS-rebinding risk.
+08 Controlled data growth
+High-volume check/event data uses retention,
+aggregation and indexes.
+ Technology Decisions
+COMPONENT TECHNOLOGY REASON
+Backend Python  Django Mature framework, ORM, auth, admin, security defaults and rapid
+domain development.
+API Django REST Framework Serialization, validation, permissions, throttling and versioned
+REST APIs.
+Database PostgreSQL Relational integrity, JSON support, indexes, transactions and
+mature operational tooling.
+Async jobs Celery Reliable task queues, retries, routing and worker scaling.
+Broker/cache Redis Fast broker/cache for task dispatch, locks, counters and rate
+limits.
+Serving Nginx  Gunicorn Common production serving pattern for Django with TLS
+termination/reverse proxy.
+Packaging Docker Repeatable local/staging/production runtime packaging.
+Frontend React/Next.js or Django
+templates
+React/Next.js preferred for a rich monitoring dashboard; Django
+templates acceptable for MVP acceleration.
+Component Design
+COMPONENT RESPONSIBILITIES MUST NOT DO
+Django API Authentication, authorization, configuration
+CRUD, dashboard queries, incident actions,
+ingestion endpoints.
+✕  Perform long-running target network
+probes inline with user requests.
+1
+
+PAGE 19
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+19 / 52Confidential development document
+COMPONENT RESPONSIBILITIES MUST NOT DO
+Celery Beat /
+scheduler
+Identify due scheduled work and enqueue jobs. ✕  Perform all probes sequentially in one
+task.
+Monitoring workers Resolve/validate targets, execute probes,
+classify results, persist checks, update state.
+✕  Trust arbitrary user URLs without
+network policy checks.
+Notification workers Render and send alerts, retries, delivery status
+and deduplication.
+✕  Block monitoring workers on slow
+external messaging providers.
+Analytics workers Aggregate historical metrics and expensive
+reports.
+✕  Recompute all history synchronously
+on dashboard requests.
+PostgreSQL Durable records and relational constraints. ✕  Act as an ephemeral message queue
+when Redis/Celery is available.
+Redis Celery broker, cache, locks, counters and rate-
+limit support.
+✕  Be the only durable store for incident
+or monitor state.
+
+PAGE 20
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+20 / 52Confidential development document
+ Recommended Django Application Structure
+REPOSITORY STRUCTURE
+monitoring_platform/
+  config/
+    settings/
+      base.py
+      development.py
+      staging.py
+      production.py
+    urls.py
+    celery.py
+  apps/
+    accounts/
+    organizations/
+    projects/
+    monitors/
+    checks/
+    incidents/
+    errors/
+    notifications/
+    analytics/
+    api_keys/
+    audit/
+    status_pages/             # later phase
+  common/
+    permissions/
+    security/
+    exceptions/
+    constants/
+    utilities/
+  tests/
+  manage.py
+Each Django app owns its models, serializers, services, selectors/query helpers, tasks and tests. Business logic
+should not be hidden inside serializers or views. Complex state transitions belong in explicit service
+functions/classes with transactional boundaries and unit tests.
+
+PAGE 21
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+21 / 52Confidential development document
+Monitoring Engine Design
+ Scheduled Monitoring Flow
+Scheduler tick
+Find active monitors
+where next_check_at ≤ now
+Queue one Celery task
+per due monitor
+Execute probe
+HTTP / HTTPS / API / health endpoint
+Capture result
+status code · latency · TLS · redirects
+Healthy?
+Yes
+Save successful check
+update status & metrics
+Open incident and
+recovery threshold
+reached?
+Yes
+Resolve incident
+send recovery notification
+No
+Save failed check
+increment consecutive failure count
+Failure threshold
+reached?
+Yes
+Open / update incident
+set DOWN or DEGRADED
+Send deduplicated alert
+according to alert policy
+Calculate next_check_at
+continue monitoring
+No
+ No
+next cycle
+FIGURE 2 Automatic monitoring and incident flow
+ Scheduler Strategy
+Celery Beat runs a short recurring scheduler task, normally every 00 seconds. The scheduler queries for
+active monitors with next_check_at less than or equal to the current UTC time. It enqueues one check task per
+monitor rather than executing probes itself. Workers can then process checks in parallel.
+1
+
+PAGE 22
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+22 / 52Confidential development document
+PYTHON / CONCEPTUAL
+# Conceptual scheduler - implementation must use row locking or another
+# idempotency strategy to avoid duplicate scheduling under concurrency.
+def dispatch_due_monitors():
+    due = Monitor.objects.filter(
+        is_active=True,
+        next_check_at__lte=timezone.now(),
+    ).order_by("next_check_at")[:BATCH_SIZE]
+    for monitor in due:
+        run_monitor_check.delay(str(monitor.id))
+ Exactly-Once Intent and Idempotency
+Celery provides at-least-once delivery semantics in common configurations. The application therefore must
+assume that a task can be delivered more than once. A unique check execution identifier or database
+uniqueness rule should prevent duplicate persistence for the same scheduled execution. Incident and
+notification creation must also be idempotent.
+ Probe Configuration
+FIELD TYPE / EXAMPLE RULE
+name string Required; unique within project recommended.
+monitor_type http | api | health MVP values; may expand later.
+url https://example.com/health Must pass scheme, host and network-policy
+validation.
+http_method GET/HEAD/POST GET default; methods requiring a body require
+explicit configuration.
+interval_seconds 60, 300, 600 Minimum controlled by plan/platform policy.
+timeout_seconds 10 Hard upper bound enforced by platform.
+expected_status 200 or range Default 2002 depending on product policy.
+response_time_threshold_ms 3000 Optional degraded threshold.
+failure_threshold 3 Consecutive failures before DOWN.
+Assign a scheduled_for timestamp or execution UUID when dispatching a check.
+Use a unique constraint on monitor_id + scheduled_for where appropriate.
+Acquire a short-lived Redis lock or database row lock before executing the same scheduled check.
+Use transaction.atomic() when updating monitor state and incident state together.
+Notification sends should have a deterministic deduplication key per incident/event/policy/action.
+
+PAGE 23
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+23 / 52Confidential development document
+FIELD TYPE / EXAMPLE RULE
+recovery_threshold 2 Consecutive successes before recovery.
+follow_redirects true Maximum redirect count required.
+headers JSON Sensitive header values encrypted/redacted.
+body JSON/text Optional; size-limited and protected.
+ Check Execution Algorithm
+ Failure Categories
+CATEGORY EXAMPLES CLASSIFICATION GUIDANCE
+DNS NXDOMAIN, resolution timeout Hard failure unless platform DNS infrastructure is
+known unhealthy.
+Connection Refused, route failure Hard failure.
+Timeout Connect/read timeout Hard failure; store timeout phase if known.
+TLS Expired certificate, hostname mismatch,
+handshake failure
+Hard failure for HTTPS monitor; separate certificate
+warning may precede expiry.
+HTTP 500/502/50/50 or unexpected code Failure according to expected status configuration.
+Load monitor configuration and confirm it is active and due.1
+Resolve the hostname and apply SSRF/network-policy checks to every resolved address.2
+Build the outbound request with an explicit user agent, timeout, redirect cap and payload-size limit.
+Record monotonic start time and execute the request.
+Capture network/TLS exception category, status code, response headers needed for monitoring and
+elapsed time.
+5
+If redirects are followed, validate each redirect target against network policy before requesting it.
+Evaluate success rules: connectivity, expected status, optional content assertion and response-time
+threshold.
+7
+Persist MonitorCheck using an idempotency key.8
+Update counters and monitor state inside a transaction.
+Create/update/resolve an incident if the state transition requires it.10
+Enqueue notifications asynchronously according to matching alert policies.11
+Set next_check_at based on the monitor cadence and scheduling policy.12
+
+PAGE 24
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+24 / 52Confidential development document
+CATEGORY EXAMPLES CLASSIFICATION GUIDANCE
+Redirect Too many redirects, unsafe redirect
+destination
+Failure.
+Content Expected text/JSON assertion missing Functional failure even if status is 200.
+Performance Response exceeds threshold Normally DEGRADED; policy may escalate to
+incident.
+Platform Worker crash, Redis unavailable Internal monitoring failure; must not automatically
+blame target service.
+ Monitor Status State Machine
+UNKNOWN
+ OPERATIONAL
+DEGRADED
+ PENDING FAILURE
+DOWN
+RECOVERING
+PAUSED
+healthy check
+failed check
+failure
+success
+soft threshold
+normal checks
+hard failure
+threshold reached
+success
+failure
+recovery threshold met
+pause
+pause
+resume
+FIGURE  Monitor status state machine
+The state model prevents rapid flapping and false outage declarations. A monitor can move from OPERATIONAL
+to PENDING FAILURE on the first failure. It reaches DOWN only when failure_threshold is met. DOWN moves to
+RECOVERING after a success and back to OPERATIONAL after recovery_threshold is met. A failed recovery
+attempt returns to DOWN. DEGRADED is used for soft failures such as sustained latency or non-critical
+assertions.
+
+PAGE 25
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+25 / 52Confidential development document
+Incident and Recovery Design
+ Incident Lifecycle
+ Duplicate Incident Prevention
+Before creating an incident, the service layer queries for an active incident for the same monitor and incident
+key. If present, it updates last_seen_at, failure_count and evidence rather than creating another row. A partial
+unique constraint or service-level lock should enforce this behavior under concurrency.
+ Incident Severity
+SEVERITY MEANING EXAMPLE
+INFO Non-disruptive informational event Certificate renewal completed.
+WARNING Potential issue requiring attention SSL expires in 1 days.
+MINOR Limited or degraded functionality Latency above threshold.
+MAJOR Important feature/service failing API returns 500 repeatedly.
+CRITICAL Broad unavailability or severe impact Primary production application unreachable.
+ Recovery and Duration
+Incident duration is measured from the first failed check that forms the confirmed outage where evidence is
+available, not merely from the notification-send time. The system stores detected_at, confirmed_at and
+resolved_at separately when useful. This allows reporting to distinguish technical outage start from confirmation
+latency.
+confirmation latency incident duration (from first failed check)
+15
+OPEN
+Automatically
+created or manually
+created; unresolved.
+ACKNOWLEDGED
+An operator has
+seen the incident.
+INVESTIGATING
+Active diagnosis is
+in progress.
+MONITORING
+A fix has been
+applied and the
+team is observing
+recovery.
+RESOLVED
+Automatic or
+manual resolution
+recorded with
+timestamps and
+duration.
+detected_at
+first failed check
+confirmed_at
+threshold reached
+resolved_at
+recovery
+confirmed
+
+PAGE 26
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+26 / 52Confidential development document
+Application Error Monitoring
+External uptime monitoring proves reachability but cannot reliably detect all broken user experiences.
+Applications owned by the customer can submit structured error events to the platform. The ingestion service
+validates project identity, rate limits traffic, redacts sensitive data, fingerprints equivalent events and updates
+aggregate error groups.
+Customer Application / SDK
+Capture event
+exception · API failure · performance · unhandled error
+Redact secrets
+strip sensitive fields before sending
+POST /api/v1/events/errors/
+project key in request
+Valid project key
+and payload?
+Reject
+audit · rate-limit
+No
+Yes
+Normalize & fingerprint
+stable fields → deterministic group key
+Create or update error group
+count occurrences
+and unique affected users
+Evaluate severity & alert rules
+Store event & aggregates
+in PostgreSQL
+Optional incident / notification
+when rule threshold is met
+threshold met
+Display in Error Dashboard
+FIGURE  Application error ingestion and grouping flow
+1
+
+PAGE 27
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+27 / 52Confidential development document
+ Error Event Payload
+JSON
+{
+  "project_key": "pk_live_xxx",
+  "environment": "production",
+  "level": "error",
+  "error_type": "DatabaseError",
+  "message": "Unable to acquire database connection",
+  "endpoint": "/api/payments/",
+  "http_method": "POST",
+  "application_version": "2.6.0",
+  "user_reference": "hashed-or-pseudonymous-id",
+  "stack_trace": "...",
+  "metadata": {"request_id": "..."},
+  "occurred_at": "2026-10-07T14:21:00Z"
+}
+ Fingerprinting
+The platform normalizes dynamic values in messages where possible and computes a fingerprint from stable
+fields such as project, environment, error type, normalized message, endpoint and a selected top stack frame.
+Fingerprint logic must be versioned because changing it can split or merge groups. A manual merge/split
+capability can be added later.
+project + environment + error type + normalized message + endpoint + top stack frame
+→ fingerprint
+ User Impact
+Where the source application provides a stable pseudonymous user reference, the platform may count unique
+affected users within a period. The value should be hashed before storage or generated by the client so the
+platform does not require personally identifiable data. The ingestion service must support configurable redaction
+for passwords, tokens, authorization headers, cookies and other sensitive fields.
+ Event Volume Controls
+Per-project rate limits and burst limits.
+Maximum payload size and stack-trace length.
+Sampling support for repeated high-volume errors.
+Retention policy for raw events; retain aggregates longer.
+Backpressure behavior that fails gracefully without exhausting the primary application database.
+
+PAGE 28
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+28 / 52Confidential development document
+Notification and Escalation Design
+ MVP Channels
+Email is mandatory for the MVP. Notification architecture must use a provider abstraction so SMS, WhatsApp,
+Slack, Microsoft Teams, Discord and generic webhooks can be added without changing incident logic.
+Email
+MVP ·
+mandatory
+SMS
+via provider
+abstraction
+WhatsApp
+via provider
+abstraction
+Slack
+via provider
+abstraction
+Microsoft
+Teams
+via provider
+abstraction
+Discord
+via provider
+abstraction
+Webhooks
+via provider
+abstraction
+ Alert Policy Model
+FIELD PURPOSE
+project/monitor scope Selects resources covered by the rule.
+event type Down, degraded, recovered, SSL warning, error threshold, etc.
+severity threshold Minimum severity that triggers action.
+delay / sustained duration Optional wait before alerting.
+channels One or more notification channels.
+recipients Users, email addresses, webhook destinations or integration targets.
+repeat/escalation Optional reminders/escalation while unresolved.
+quiet hours / maintenance Suppresses or reroutes alerts under defined conditions.
+ Deduplication and Retry
+Each outbound notification receives a deduplication key such as incident_id + policy_id + transition +
+escalation_level. A unique constraint or send ledger prevents duplicate delivery when Celery retries. Provider
+failures use exponential backoff with a maximum retry count and are visible in operations telemetry.
+incident_id + policy_id + transition + escalation_level → dedupe_key
+17
+
+PAGE 29
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+29 / 52Confidential development document
+Data Architecture and ERD
+User
+PK
+id
+email
+password_hash
+is_active
+email_verified_at
+Membership
+FK
+organization_id
+FK
+user_id
+role
+created_at
+Organization
+PK
+id
+name
+slug
+FK
+owner_id
+archived_at
+AuditLog
+PK
+id
+FK
+organization_id
+FK
+user_id
+action
+resource_type
+ip_address
+ErrorEvent
+PK
+id
+FK
+error_group_id
+occurred_at
+user_reference_hash
+stack_trace
+MonitorCheck
+PK
+id
+FK
+monitor_id
+execution_key
+scheduled_for
+success
+status_code
+response_time_ms
+Monitor
+PK
+id
+FK
+project_id
+type · url · method
+interval_seconds
+status
+next_check_at
+Project
+PK
+id
+FK
+organization_id
+name
+slug
+environment
+status
+AlertPolicy
+PK
+id
+FK
+project_id
+conditions_json
+channels_json
+enabled
+ErrorGroup
+PK
+id
+FK
+project_id
+fingerprint
+environment
+occurrence_count
+last_seen
+Incident
+PK
+id
+FK
+monitor_id
+incident_key
+severity
+status
+confirmed_at
+resolved_at
+Notification
+PK
+id
+FK
+incident_id
+FK
+policy_id
+dedupe_key
+channel
+status
+APIKey
+PK
+id
+FK
+project_id
+key_prefix
+key_hash
+scopes
+revoked_at
+LEGEND one-to-many PKprimary key FKforeign key Fields shown are key columns; see Section 1 for the full specification.
+FIGURE 5 Core entity relationship diagram
+ Data Design Principles
+18
+UUID primary keys are recommended for externally addressable tenant resources.
+Organization ownership is explicit and indexed on all tenant-scoped root entities.
+High-volume tables such as MonitorCheck and ErrorEvent require time-oriented indexes and planned
+retention.
+JSONB is acceptable for variable metadata but core query/filter fields belong in typed columns.
+Timestamps are timezone-aware and stored in UTC.
+Soft deletion or archival is preferred for projects/monitors when historical reporting depends on them.
+Database constraints backstop application-level validation for uniqueness and referential integrity.
+
+PAGE 30
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+30 / 52Confidential development document
+Django Domain Model Specification
+MODEL KEY FIELDS CONSTRAINTS / INDEXES
+User id email password_hash is_active
+email_verified_at created_at
+Unique email. Use custom user model
+from project start.
+Organization id name slug owner_id created_at
+archived_at
+Unique slug; owner must be active
+member.
+Membership organization_id user_id role created_at Unique organization + user.
+Project id organization_id name slug environment
+status created_by
+Unique slug within organization.
+Monitor id project_id name type url method
+interval_seconds timeout_seconds status
+counters next_check_at
+Index project/status/next_check_at;
+validate outbound target.
+MonitorCheck id monitor_id execution_key scheduled_for
+checked_at success status_code
+response_time_ms error_type
+Unique monitor +
+execution_key/scheduled_for; index
+monitor + checked_at descending.
+Incident id monitor_id incident_key severity status
+first_failure_at confirmed_at resolved_at
+failure_count
+Prevent duplicate active incident for same
+incident key.
+AlertPolicy id project_id name conditions_json
+channels_json enabled
+Validate policy schema.
+Notification id incident_id policy_id dedupe_key channel
+recipient status attempts sent_at
+Unique dedupe_key recommended.
+APIKey id project_id key_prefix key_hash scopes
+last_used_at revoked_at
+Store hash, not recoverable secret.
+ErrorGroup id project_id fingerprint environment
+error_type normalized_message first_seen
+last_seen occurrence_count
+Unique project + fingerprint +
+environment.
+ErrorEvent id error_group_id occurred_at received_at
+user_reference_hash stack_trace metadata
+High-volume retention and payload limits
+required.
+AuditLog id organization_id user_id action
+resource_type resource_id metadata ip_address
+created_at
+Append-only application behavior
+preferred.
+1
+
+PAGE 31
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+31 / 52Confidential development document
+ Representative Django Model Pattern
+PYTHON / REPRESENTATIVE ONLY
+class Monitor(models.Model):
+    class Status(models.TextChoices):
+        UNKNOWN = "unknown", "Unknown"
+        OPERATIONAL = "operational", "Operational"
+        PENDING_FAILURE = "pending_failure", "Pending failure"
+        DEGRADED = "degraded", "Degraded"
+        DOWN = "down", "Down"
+        RECOVERING = "recovering", "Recovering"
+        PAUSED = "paused", "Paused"
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="monitors")
+    name = models.CharField(max_length=120)
+    url = models.URLField(max_length=2048)
+    interval_seconds = models.PositiveIntegerField(default=60)
+    timeout_seconds = models.PositiveIntegerField(default=10)
+    failure_threshold = models.PositiveSmallIntegerField(default=3)
+    recovery_threshold = models.PositiveSmallIntegerField(default=2)
+    status = models.CharField(max_length=32, choices=Status.choices, default=Status.UNKNOWN)
+    next_check_at = models.DateTimeField(db_index=True)
+    is_active = models.BooleanField(default=True)
+    class Meta:
+        indexes = [
+            models.Index(fields=["project", "status"]),
+            models.Index(fields=["is_active", "next_check_at"]),
+        ]
+MODELING CAUTION
+Do not place network calls, notification sends or complex incident transitions inside model save()
+methods or Django signals. Use explicit service functions/tasks so retries, transactions and test
+behavior remain predictable.
+API Specification
+ API Conventions
+20
+Base path: /api/v1/ .
+JSON request and response bodies unless an export endpoint states otherwise.
+Authentication: secure session for same-origin Django UI or short-lived access/refresh tokens for decoupled
+frontend; implementation must choose one primary model and document it.
+
+PAGE 32
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+32 / 52Confidential development document
+ Endpoint Catalog
+METHOD ENDPOINT ACCESS PURPOSE
+POST /api/v1/auth/register/ Public Create user account
+POST /api/v1/auth/login/ Public Authenticate
+POST /api/v1/auth/password-reset/ Public Start password reset
+GET POST /api/v1/organizations/ Authenticated List accessible organizations /
+create organization
+GET PATCH /api/v1/organizations/{id}/ Member Read/update organization
+subject to role
+GET POST /api/v1/projects/ Member List/create projects
+GET PATCH
+DELETE
+/api/v1/projects/{id}/ Member Read/update/archive project
+GET POST /api/v1/monitors/ Member List/create monitors
+GET PATCH
+DELETE
+/api/v1/monitors/{id}/ Member Read/update/archive monitor
+POST /api/v1/monitors/{id}/test/ Developer+ Run manual check
+POST /api/v1/monitors/{id}/pause/ Developer+ Pause monitor
+POST /api/v1/monitors/{id}/resume/ Developer+ Resume monitor
+GET /api/v1/monitors/{id}/checks/ Viewer+ Paginated check history
+GET /api/v1/monitors/{id}/statistics/ Viewer+ Uptime and latency statistics
+GET /api/v1/incidents/ Viewer+ Incident list/filter
+GET /api/v1/incidents/{id}/ Viewer+ Incident details
+POST /api/v1/incidents/{id}/acknowledge/ Developer+ Acknowledge incident
+POST /api/v1/incidents/{id}/resolve/ Developer+ Manually resolve where
+permitted
+Tenant access is derived from authenticated membership, never from a client-provided organization ID
+alone.
+Pagination is mandatory for potentially large lists.
+Errors use a consistent machine-readable code and human-readable message.
+Idempotency keys are recommended for external ingestion or create operations that may be retried.
+
+PAGE 33
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+33 / 52Confidential development document
+METHOD ENDPOINT ACCESS PURPOSE
+POST /api/v1/events/errors/ Project key Ingest application error event
+GET /api/v1/projects/{id}/errors/ Viewer+ List grouped application errors
+GET /api/v1/errors/{id}/ Viewer+ Error-group detail
+POST /api/v1/errors/{id}/resolve/ Developer+ Mark error group resolved
+GET /api/v1/dashboard/ Viewer+ Organization/project summary
+dashboard
+ Standard Error Envelope
+JSON
+{
+  "success": false,
+  "error": {
+    "code": "MONITOR_NOT_FOUND",
+    "message": "The requested monitor does not 
+exist.",
+    "details": {}
+  },
+  "request_id": "req_..."
+}
+ Pagination Envelope
+JSON
+{
+  "count": 1250,
+  "next": "/api/v1/monitors/...?page=2",
+  "previous": null,
+  "results": [ ... ]
+}
+Frontend and UX Specification
+ Primary Navigation
+Overview Projects Monitors Incidents Errors Reports Team Integrations Settings
+ Main Dashboard
+The dashboard should prioritize system health, not decorative metrics. The first viewport should show total
+monitors, operational/degraded/down counts, active incidents, average uptime and recent critical events. Users
+must be able to filter by organization/project and time range.
+21
+
+PAGE 34
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+34 / 52Confidential development document
+Overview Organization ▾    Project ▾    Last 2 hours ▾
+TOTAL
+MONITORS
+8
+OPERATIONAL
+
+DEGRADED
+2
+DOWN
+2
+ACTIVE
+INCIDENTS
+2
+AVERAGE
+UPTIME
+.%
+Illustrative first-viewport layout — values are placeholders.
+ Monitor Detail  Incident Detail
+ Accessibility and Responsive Behavior
+Security Architecture
+ Threat Model Summary
+THREAT SCENARIO REQUIRED CONTROLS
+SSRF / internal
+network access
+A user creates a monitor targeting
+localhost, private IPs, cloud
+metadata or rebinding DNS.
+Allow only approved schemes; resolve and validate
+IPs; block loopback/private/link-
+local/multicast/metadata ranges; revalidate redirects
+and connection destination; use egress firewall
+where possible.
+Current status and last check time.
+Uptime for selected period.
+Average, minimum, maximum and later percentile
+latency.
+Response-time trend chart.
+Check history with error reason/status code.
+Active/recent incident timeline.
+Configuration summary and pause/resume/test
+controls according to permissions.
+Severity and current lifecycle status
+Start/confirmation/resolution timestamps
+Affected monitor/project
+Failure evidence and recent check samples
+Acknowledgement and operator notes
+Notification delivery history
+Recovery evidence
+All core actions keyboard accessible.✓
+Status is conveyed by text/iconography as well as color.✓
+Tables have responsive alternatives or controlled horizontal scrolling.✓
+Forms provide explicit labels, validation messages and preserved input on errors.✓
+Charts provide textual summaries for critical status information.✓
+22
+
+PAGE 35
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+35 / 52Confidential development document
+THREAT SCENARIO REQUIRED CONTROLS
+Cross-tenant access A user guesses another tenant
+UUID.
+Scope every query by accessible organization;
+object-level permissions; test horizontal privilege
+escalation.
+Credential leakage Headers or API keys appear in
+logs/errors.
+Redact sensitive headers/fields; hash API keys;
+secrets manager/environment injection; logging
+filters.
+Ingestion abuse Attackers flood error endpoint. Project-key auth, throttling, payload caps, sampling
+and queue backpressure.
+Alert spam Repeated retries send many
+notifications.
+Deduplication keys, escalation windows, provider
+retry controls.
+Malicious response
+payload
+Target returns huge/hostile content. Stream with byte limit; do not execute HTML/JS;
+parse only required assertions safely.
+Account takeover Weak password/session handling. Django password hashing, secure cookies/token
+controls, MFA in later phase, login throttling.
+Supply-chain risk Dependency vulnerability. Pinned dependencies, automated vulnerability
+scanning, patch cadence, minimal images.
+ SSRF Protection  Mandatory Detailed Controls
+ Authentication and Session Security
+MANDATORY
+Accept only http and https schemes for MVP.
+Reject URLs containing embedded credentials unless a dedicated secure auth feature is implemented.
+Resolve DNS before request; block loopback, private, link-local, multicast, reserved and cloud
+metadata address ranges.
+Re-resolve or verify the actual connected address where the HTTP client permits, protecting against
+DNS rebinding.
+Validate every redirect destination independently; cap redirect depth.
+Apply outbound firewall/network policy so worker containers cannot reach sensitive control-plane
+networks or metadata services.
+Use explicit connect/read timeouts and response-size limits.
+Record blocked attempts in audit/security logs without exposing secrets.
+Use Django password hashing; never implement custom password hashing.
+Secure, HttpOnly, SameSite cookies for session-based UI; CSRF protection remains enabled.
+If JWT is used, use short-lived access tokens, secure refresh-token rotation and revocation strategy.
+Password reset tokens are single-purpose, time-limited and invalidated appropriately.
+Administrative accounts should support MFA in a later hardening phase.
+
+PAGE 36
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+36 / 52Confidential development document
+ API Key Security
+Generate project ingestion keys using cryptographically secure random bytes. Display the secret only once.
+Persist a prefix for identification and a one-way hash for verification. Support scopes, last-used timestamp and
+revocation. Secret values must never appear in application logs, analytics or normal API responses after
+creation.
+Multi-Tenancy and Data Isolation
+The platform uses shared-database logical multi-tenancy. Organization is the primary tenant boundary. Projects
+belong to one organization, and all downstream resources inherit that tenancy. Querysets must be scoped
+through the authenticated user membership before object lookup. Direct Model.objects.get(pk=...)  on tenant
+resources inside request handlers is prohibited unless additional tenant filtering is guaranteed.
+PYTHON / CONCEPTUAL
+# Preferred pattern
+monitor = Monitor.objects.filter(
+    project__organization__memberships__user=request.user,
+    id=monitor_id,
+).select_related("project").first()
+ Isolation Test Requirements
+Performance, Scalability and Retention
+ Data Growth
+At a one-minute interval, one monitor can create approximately 1,0 check rows per day. One thousand
+monitors can therefore produce roughly 1. million rows per day before error events and notifications. The
+architecture must treat check/event tables as high-volume data from the start.
+2
+Organization
+→
+Project
+→
+Monitor · AlertPolicy · APIKey ·
+ErrorGroup →
+Checks · Incidents ·
+Notifications · Events
+User A cannot list, retrieve, update or delete Organization B resources.✓
+Project keys cannot ingest events into another project.✓
+Export/report endpoints cannot leak cross-tenant aggregates.✓
+Search endpoints apply the same organization scope before filtering.✓
+Background tasks verify referenced object ownership/configuration before processing external input.✓
+2
+
+PAGE 37
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+37 / 52Confidential development document
+1
+monitor
+ 1-minute interval → 1,0
+check rows / day
+ 1,000 monitors → 1.M
+rows / day
+ Index Strategy
+INDEX SERVES
+Monitor(is_active, next_check_at) for scheduler scans.
+Monitor(project_id, status) for dashboards.
+MonitorCheck(monitor_id, checked_at DESC) for history queries.
+Incident(monitor_id, status) and project/time access through monitor joins or
+denormalized project reference if later justified.
+ErrorGroup(project_id, environment, last_seen DESC)
+ErrorEvent(error_group_id, occurred_at DESC)
+AuditLog(organization_id, created_at DESC)
+ Retention Baseline
+DATA INITIAL RECOMMENDATION LONG-TERM STRATEGY
+Raw monitor checks 0 days Aggregate into hourly/daily metrics before
+deletion.
+Incidents Long-term / permanent subject to
+account retention
+Small volume; important audit history.
+Raw error events 00 days depending on plan Keep error-group aggregates longer.
+Notifications 0180 days Retain delivery summary as needed.
+Audit logs At least 1 year where operationally
+feasible
+Policy driven.
+Aggregated reliability metrics Long-term Stored in summary tables or analytics
+store.
+ Scaling Path
+The first release can scale by adding Celery workers and Django API instances. When PostgreSQL analytical
+load becomes a constraint, historical high-volume telemetry may be moved or replicated to an analytics
+database such as ClickHouse. Kafka or another streaming system should not be introduced until workload
+evidence justifies the operational complexity.
+
+PAGE 38
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+38 / 52Confidential development document
+Infrastructure and Deployment
+EDGE
+APPLICATION TIER
+DATA & EXECUTION
+Internet / Users
+DNS · CDN · WAF
+e.g. Cloudflare
+Nginx / Load Balancer
+Django API Instances
+Gunicorn · horizontally scaled
+Celery Beat
+single active scheduler
+Object Storage
+optional · exports / artifacts
+Managed PostgreSQL
+primary + backups
+Redis
+broker / cache
+Celery Worker Pool
+monitoring · notifications · analytics
+separate queues per workload
+External Targets
+sites / apps
+Platform Observability
+logs · metrics · alerts — monitored independently
+exports
+ SQL
+ enqueue
+ due jobs
+consume
+persist results
+telemetry from every component
+Ops alerts are delivered through a channel independent of the platform itself.
+FIGURE  Production deployment architecture
+Today
+Add Celery workers and Django API
+instances
+When analytics load grows
+Move or replicate telemetry to an
+analytics DB such as ClickHouse
+Only with workload evidence
+Kafka or another streaming system
+25
+
+PAGE 39
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+39 / 52Confidential development document
+ Runtime Services
+SERVICE PURPOSE SCALING / AVAILABILITY NOTES
+nginx Reverse proxy, request limits,
+static/media routing where used.
+At least one production instance; load-
+balanced/redundant for higher availability.
+web Gunicorn running Django/DRF. Multiple workers; horizontally scalable;
+stateless where possible.
+postgres Authoritative relational database. Managed service preferred; automated
+backups and monitoring.
+redis Celery broker/cache. Persistence/HA configuration appropriate to
+workload; monitor memory and latency.
+celery_monitoring External probe tasks. Horizontal scale; egress policy and concurrency
+controls.
+celery_notifications Provider sends. Separate queue prevents alert delays from
+monitoring workload.
+celery_analytics Aggregation/report tasks. Lower priority queue.
+celery_beat Periodic scheduler. Exactly one active scheduler or a leader-
+election strategy.
+ Docker Composition
+YAML / CONCEPTUAL
+services:
+  web:
+    # Django + Gunicorn
+  postgres:
+    # PostgreSQL
+  redis:
+    # Broker/cache
+  celery_monitoring:
+    # queue: monitoring
+  celery_notifications:
+    # queue: notifications
+  celery_analytics:
+    # queue: analytics
+  celery_beat:
+    # scheduler
+  nginx:
+    # reverse proxy
+
+PAGE 40
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+40 / 52Confidential development document
+ Environments
+Platform Observability
+WATCH THE WATCHER
+A monitoring platform must itself be monitored independently. It is unacceptable for all workers to stop
+while the dashboard incorrectly suggests that no services are failing.
+AREA REQUIRED SIGNALS
+Django API Request rate latency xx/5xx process health error rate
+Celery workers Heartbeat active workers task success/failure runtime retries
+Scheduler Last successful tick due-job lag dispatch count
+Redis Memory connections latency evictions broker backlog
+PostgreSQL Connections query latency locks storage replication/backups
+Queues Depth and oldest-task age per queue
+Monitoring quality Scheduled-check delay probe duration internal probe failure rate
+Notifications Send success/failure provider latency retry backlog
+ Worker Heartbeat
+Workers should expose or publish heartbeat signals. Operations alerting should trigger if the scheduler has not
+dispatched work, monitoring worker count falls below minimum, or queue age exceeds threshold. These
+operational alerts should be delivered through a channel independent enough to be useful during platform
+failure.
+Local
+Developer workstation
+Docker compose or
+documented local
+dependencies; safe test
+endpoints only.
+Development
+Shared integration
+environment
+May use seeded test data;
+not customer production
+data.
+Staging
+Production-like verification
+Same deployment
+topology and migrations
+as production where
+feasible.
+Production
+Live service
+Change-controlled
+deployment, backups,
+monitoring and secrets
+management.
+2
+
+PAGE 41
+PART III
+Quality, Delivery and
+Operations
+This part defines quality assurance, deployment, operations and
+delivery controls — how the platform is tested, released, recovered
+and run day to day.
+ Testing Strategy
+ CI/CD and Release Management
+ Backup and Disaster Recovery
+ Operational Runbook
+ Coding Standards and Repository
+Structure
+ Development Roadmap
+ Risk Register
+ Definition of Done and Final
+Acceptance
+ Future Enhancements
+
+PAGE 42
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+42 / 52Confidential development document
+Testing Strategy
+ Test Levels
+LEVEL PURPOSE EXAMPLES
+Unit Verify pure business logic and state
+transitions.
+Status transition, fingerprinting, uptime
+calculation.
+Model/DB Verify constraints, indexes and transaction
+behavior.
+Unique incident/dedupe keys, membership rules.
+API Verify serialization, permissions, validation
+and responses.
+Cross-tenant access tests, monitor CRUD.
+Task Verify Celery task behavior and retries. Duplicate delivery, notification retry.
+Integration Verify services working together. Scheduler → queue → worker → check →
+incident → email.
+Security Verify common attack and isolation controls. SSRF, authz, rate limits, secret redaction.
+Performance Verify load targets and data-query behavior. 10k due monitors, dashboard queries on large
+data.
+End-to-end Verify real user workflows in staging. Create monitor, simulate outage, recover, review
+incident.
+ Required Test Cases
+ID SCENARIO INPUT EXPECTED RESULT
+MON-001 Healthy endpoint HTTP 200 within threshold Check success; status operational; no
+incident.
+MON-002 Unexpected 500 Three consecutive 500 responses After threshold, status DOWN and one
+incident created.
+MON-003 Transient failure One timeout then success No confirmed outage when threshold >
+1; counter resets.
+MON-004 Recovery Down monitor receives configured
+consecutive successes
+Incident resolves and recovery alert
+queued.
+MON-005 Duplicate Celery
+task
+Same execution key delivered
+twice
+Only one check record/state transition.
+SEC-001 Private IP target URL resolves to
+127.0.0.1/10.x/metadata
+Creation or execution blocked
+according to policy; security log
+written.
+27
+
+PAGE 43
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+43 / 52Confidential development document
+ID SCENARIO INPUT EXPECTED RESULT
+SEC-002 Redirect SSRF Public URL redirects to private
+address
+Redirect blocked; no private request
+executed.
+TEN-001 Cross-tenant read User A requests Organization B
+monitor UUID
+0/0 without resource metadata
+leakage.
+ERR-001 Valid error event Valid project key and payload Event accepted, group
+created/updated.
+ERR-002 Revoked key Revoked project key 01/0; event not stored.
+NOT-001 Provider temporary
+failure
+Email send fails temporarily Task retries; no duplicate successful
+delivery.
+PERF-001 Scheduler backlog Large due set Jobs dispatched in bounded batches;
+scheduler remains responsive.
+ Tooling
+pytest and pytest-django Factory Boy or equivalent factories/fixtures DRF APIClient / APIRequestFactory
+responses/respx or equivalent outbound HTTP mocking
+Celery eager-mode unit tests plus broker-backed integration tests
+Coverage reporting with meaningful branch coverage targets Load testing with Locust/k or equivalent
+Dependency and security scanning in CI
+
+PAGE 44
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+44 / 52Confidential development document
+CI/CD and Release Management
+ Pipeline
+ Database Migration Rules
+Backup and Disaster Recovery
+ASSET BACKUP / RECOVERY REQUIREMENT
+PostgreSQL Automated daily backups minimum; point-in-time recovery preferred; periodic restore
+test.
+Redis Treat as non-authoritative for core records; configure persistence/HA for queue
+continuity as appropriate.
+Object storage Versioning/lifecycle if exports or user artifacts are stored.
+Secrets/configuration Managed secret store and infrastructure-as-code/config backup.
+Source code Protected remote Git repository with branch protection.
+28
+PR
+Developer opens
+pull request.
+1 CI
+CI installs locked
+dependencies and
+runs
+formatting/lint/type
+checks.
+2 CI
+Unit, API, model
+and task tests run.
+ CI
+Security/dependency
+scans run.
+ BUILD
+Docker image
+builds using
+immutable
+commit/version
+tags.
+5
+STAGING
+Approved merge
+deploys
+automatically to
+staging.
+ STAGING
+Staging smoke and
+migration checks
+run.
+7 PRODUCTION
+Production
+deployment
+requires approval
+according to
+release policy.
+8 PRODUCTION
+Post-deployment
+health checks and
+smoke tests run.
+ PRODUCTION
+Rollback is initiated
+automatically or
+manually if release
+health fails.
+10
+Every schema change has a Django migration committed with the code.
+Large table changes are assessed for lock duration before production.
+Backward-compatible expand/migrate/contract patterns are preferred for risky changes.
+Data migrations must be restartable/idempotent or include clear recovery steps.
+Production backup/recovery capability is confirmed before destructive changes.
+2
+
+PAGE 45
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+45 / 52Confidential development document
+ Recovery Objectives
+Exact RPO/RTO targets should be approved before production launch. A reasonable initial target for planning is
+an RPO of less than 2 hours for basic backups, improved to point-in-time recovery where the database
+provider supports it, and an RTO measured in hours rather than days. These targets must be validated against
+business requirements before launch.
+RPO · PLANNING TARGET
+ 2 h
+improving to point-in-time recovery where supported
+RTO · PLANNING TARGET
+Hours
+not days — validated before launch
+ Disaster Scenarios
+SCENARIO RESPONSE
+Web/API instance loss replace instance from image/container and load balancer health checks.
+Worker loss scale/restart workers; queued tasks remain available subject to broker persistence.
+Redis loss restore/recreate and requeue recoverable scheduled work; do not infer target downtime
+from broker outage.
+Database loss restore from managed backup/PITR and verify migrations/data integrity.
+Provider outage document alternate communication and recovery process.
+Operational Runbook
+ Daily Operational Checks
+ Monitor Investigation Procedure
+0
+Scheduler heartbeat current
+Monitoring queue oldest-task age below threshold
+Expected number of active monitoring workers
+Notification failure rate normal
+Database storage and connection utilization
+healthy
+Redis memory and eviction rate healthy
+Backup job status successful
+Internal platform health endpoint operational
+Confirm whether the failure is target-specific or platform-wide.1
+Review latest check records, failure category, DNS/TLS information and latency.2
+Compare with checks for unrelated targets from the same worker/region.
+Review platform queue/worker health to rule out internal monitoring failure.
+
+PAGE 46
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+46 / 52Confidential development document
+ Stuck Queue Procedure
+Coding Standards and Repository Structure
+ Python/Django Standards
+ Git Workflow
+BRANCHING CONVENTION
+main        # production-ready
+develop     # optional shared integration branch
+feature/*   # scoped feature work
+fix/*       # non-emergency bug fixes
+hotfix/*    # urgent production fixes
+Acknowledge incident if human ownership is established.5
+Communicate according to escalation policy.
+After recovery, verify consecutive successful checks and close/resolve notes if required.7
+Check Redis availability and latency.
+Check worker heartbeat and process logs.
+Inspect oldest task age and failure/retry patterns.
+Scale workers if backlog is load-related.
+Stop dispatch temporarily only if necessary to protect data consistency.
+After recovery, confirm next_check_at values and avoid a thundering-herd burst.
+1
+PEP 8-compatible style; automated formatting with Black or an agreed formatter.
+Ruff or equivalent for linting/import checks; type checking on service and integration boundaries where
+practical.
+pytest as the primary test runner.
+Explicit service layer for stateful workflows.
+Django settings split by environment; secrets never committed.
+Query count awareness: select_related/prefetch_related for dashboard endpoints.
+Database transactions for monitor-state and incident transitions.
+Structured logging with request/task IDs.
+Docstrings for public service functions and non-obvious algorithms, not redundant comments.
+Protected main branch✓
+Pull request required✓
+
+PAGE 47
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+47 / 52Confidential development document
+Development Roadmap
+At least one reviewer for normal changes; additional reviewer for security-sensitive changes✓
+CI must pass before merge✓
+Squash or merge strategy standardized by team✓
+Release tags use semantic or clearly documented versioning✓
+2
+PHASE 1
+Foundation
+Django project, environments,
+PostgreSQL, Redis, Celery, auth,
+organizations, roles, base API.
+EXIT CONDITION
+User can register and create an
+organization/project.
+PHASE 2
+Monitoring Core
+Monitor model, scheduler, workers, HTTP
+probe, check history, state counters.
+EXIT CONDITION
+System automatically checks
+registered sites.
+PHASE 
+Incidents
+Failure/recovery thresholds, incident
+lifecycle, dedupe, incident UI/API.
+EXIT CONDITION
+Confirmed outages create one
+managed incident.
+PHASE 
+Notifications
+Email provider abstraction, policies,
+retries, dedupe, recovery alert.
+EXIT CONDITION
+Users receive reliable
+outage/recovery alerts.
+PHASE 5
+Analytics
+Uptime, latency charts, history filters,
+aggregate tasks.
+EXIT CONDITION
+Operational dashboard usable for
+reporting.
+PHASE 
+Error Monitoring
+Project keys, ingestion API, redaction,
+fingerprinting, error groups.
+EXIT CONDITION
+Owned applications can report
+user-impacting errors.
+PHASE 7
+Hardening
+SSRF testing, load tests, observability,
+backup restore, security review.
+EXIT CONDITION
+Production readiness gate passed.
+PHASE 8
+Expansion
+SSL warnings, status pages, more
+channels, SDKs, multi-region probes.
+EXIT CONDITION
+Post-MVP capability growth.
+1
+2
+
+
+5
+
+7
+8
+
+PAGE 48
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+48 / 52Confidential development document
+Risk Register
+High R-07 R-10 R-03 R-02
+Medium R-04 R-01 R-05 R-09 R-08
+Low R-06
+Medium High Critical
+IMPACT
+Risk heat map — each identifier is
+placed by its likelihood and impact
+rating from the register below.
+ID RISK LIKELIHOOD IMPACT MITIGATION
+R-01 False outage alerts Medium High Consecutive failure thresholds, retry from
+alternate worker/region later, platform-health
+classification.
+R-02 SSRF abuse High Critical Strict URL/IP validation, redirect checks, egress
+firewall, security tests.
+R-03 High telemetry volume High High Retention, aggregation, indexes, queue
+separation, capacity testing.
+R-04 Notification provider
+outage
+Medium Medium Retries, provider abstraction, alternative
+channels later, delivery status visibility.
+R-05 Redis/Celery outage Medium High Monitoring of broker/workers, restart procedures,
+non-authoritative Redis design.
+R-06 Cross-tenant data leak Low Critical Centralized scoping patterns, permission tests,
+security review.
+R-07 Alert fatigue High Medium Deduplication, escalation, quiet hours and
+severity thresholds.
+R-08 Monitoring platform
+self-failure
+Medium Critical Independent observability and external health
+monitoring of the platform.
+R-09 Long DB migrations Medium High Migration review, staged changes, backups and
+rollback plans.
+R-10 Scope expansion
+delays MVP
+High Medium Strict phase gates; defer non-core integrations.
+
+LIKELIHOOD
+
+PAGE 49
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+49 / 52Confidential development document
+Definition of Done and Final Acceptance
+ Definition of Done for a Feature
+ Production MVP Acceptance Gate
+AREA ACCEPTANCE CONDITION
+■Core workflow Register → organization → project → monitor → automatic checks operates end to end.
+■Outage Configured consecutive failures create exactly one incident.
+■Recovery Configured successful checks resolve incident and return monitor to operational.
+■Alerts Email alert and recovery alert are delivered or recorded as provider failures with retry.
+■Security SSRF and cross-tenant tests pass; secrets are redacted and keys hashed.
+■Performance Scheduler and workers meet agreed workload test target with acceptable queue delay.
+■Operations Backups, restore test, worker/scheduler/database/Redis monitoring and deployment runbook
+exist.
+■Quality Automated test suite and staging smoke test pass on release candidate.
+Future Enhancements
+01 Multi-region monitoring with quorum-based
+outage confirmation.
+02 Public and private status pages, subscriptions
+and custom domains.
+0 TCP, DNS, ICMP where permitted, WebSocket and
+cron heartbeat monitors.
+0 Synthetic browser transactions for login/checkout
+flows.
+05 Native SDKs for JavaScript, Python, PHP, Flutter
+and React Native.
+0 Release/deployment markers correlated with
+errors and latency.
+
+Acceptance criteria implemented.
+Code follows project standards and has peer
+review.
+Unit/integration tests added and passing.
+Permissions and tenant isolation verified.
+Database migration included and tested where
+applicable.
+Security implications reviewed.
+API behavior documented if externally visible.
+Operational logs/metrics added for background
+workflows.
+Staging validation completed.
+No known critical or high-severity defects remain
+for the feature.
+5
+
+PAGE 50
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+50 / 52Confidential development document
+07 OpenTelemetry integration and trace correlation. 08 Advanced SLO/SLA dashboards and error-budget
+tracking.
+0 Incident collaboration, postmortems and runbook
+links.
+10 AI-assisted summaries and probable-cause
+suggestions using collected evidence, with human
+approval for actions.
+REFERENCE
+Appendices
+API Conventions, Environment Variables, Status Rules, Glossary
+A API Response Examples
+MONITOR SUMMARY JSON
+{
+  "id": "4f...",
+  "name": "Main Production Site",
+  "status": "operational",
+  "last_checked_at": "2026-10-07T14:35:00Z",
+  "next_check_at": "2026-10-07T14:36:00Z",
+  "uptime_30d": 99.95,
+  "latest_response_time_ms": 281
+}
+INCIDENT JSON
+{
+  "id": "inc_...",
+  "status": "open",
+  "severity": "critical",
+  "started_at": "2026-10-07T14:02:00Z",
+  "confirmed_at": "2026-10-07T14:02:20Z",
+  "failure_type": "timeout",
+  "failure_count": 3
+}
+B Environment Variables
+VARIABLE PURPOSE
+DJANGO_SECRET_KEY Django cryptographic secret; managed securely.
+DJANGO_SETTINGS_MODULE Selects environment settings module.
+DATABASE_URL PostgreSQL connection information.
+REDIS_URL Redis broker/cache endpoint.
+ALLOWED_HOSTS Production host allowlist.
+CSRF_TRUSTED_ORIGINS Trusted HTTPS origins where required.
+CORS_ALLOWED_ORIGINS Only if separate frontend origin is used.
+
+PAGE 51
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+51 / 52Confidential development document
+VARIABLE PURPOSE
+EMAIL_BACKEND / provider keys Notification provider configuration.
+DEFAULT_FROM_EMAIL Sender identity.
+MONITOR_MAX_TIMEOUT_SECONDS Platform-enforced timeout cap.
+MONITOR_MIN_INTERVAL_SECONDS Platform-enforced minimum cadence.
+MONITOR_MAX_RESPONSE_BYTES Maximum response data read per probe.
+ERROR_EVENT_MAX_BYTES Maximum ingestion payload size.
+SENTRY_DSN or equivalent Optional platform self-observability, not customer event pipeline.
+C Status Rules Summary
+STATUS ENTRY CONDITION EXIT CONDITION
+UNKNOWN No conclusive check yet or monitor
+resumed.
+Healthy check → OPERATIONAL ; failed check
+→ PENDING FAILURE .
+OPERATIONAL Healthy and below degradation
+thresholds.
+Failure → PENDING FAILURE ; soft threshold
+→ DEGRADED ; pause → PAUSED .
+PENDING FAILURE One or more consecutive failures below
+confirmation threshold.
+Success → OPERATIONAL ; threshold reached
+→ DOWN.
+DOWN Confirmed hard failure. Success → RECOVERING ; pause →
+PAUSED .
+RECOVERING Successes after DOWN but below
+recovery threshold.
+Threshold → OPERATIONAL ; failure →
+DOWN.
+DEGRADED Reachable but performance/content soft
+rule breached.
+Normal checks → OPERATIONAL ; hard failure
+→ PENDING FAILURE .
+PAUSED Manually disabled monitoring. Resume → UNKNOWN.
+D Glossary
+API Application Programming Interface. APM Application Performance Monitoring.
+Celery Python distributed task queue used for
+background jobs.
+Celery Beat Periodic task scheduler for Celery.
+DRF Django REST Framework. ERD Entity Relationship Diagram.
+Incident A confirmed reliability or availability
+problem tracked through resolution.
+Monitor Configuration that defines how a target is
+checked.
+
+PAGE 52
+WEB & APPLICATION MONITORING PLATFORM Technical Specification · v1.0
+52 / 52Confidential development document
+Probe One outbound monitoring attempt. Redis In-memory data store used as
+broker/cache.
+RPO Recovery Point Objective; acceptable data-
+loss window.
+RTO Recovery Time Objective; target time to
+restore service.
+SSRF Server-Side Request Forgery. SLO Service Level Objective.
+Uptime Percentage of a reporting period in which
+the monitored service is considered
+available.
+E Implementation Checklist
+Custom Django user model created before first
+production migration.
+Organization membership/RBAC implemented and
+tested.
+Project and monitor CRUD with tenant scoping.
+URL validation and SSRF protection complete.
+Celery queues separated by workload.
+Celery Beat scheduler and idempotent check dispatch.
+MonitorCheck persistence and required indexes.
+State machine with failure/recovery thresholds.
+Incident deduplication and lifecycle.
+Email provider integration with retry/dedupe.
+Error ingestion keys hashed and revocable.
+Error-event redaction, grouping and rate limiting.
+Dashboard and history APIs paginated/cached as
+needed.
+Audit logs for security-sensitive actions.
+Automated test suite and load/security tests.
+Production deployment, backup, monitoring and
+runbook validated.
+FINAL STATEMENT
+This specification is intended to be sufficiently complete for the development team to begin
+implementation while preserving room for ordinary engineering decisions. Any change that materially
+affects tenant security, monitoring semantics, incident behavior, data retention, external API contracts
+or production architecture should be documented and approved before implementation. The first
+priority is a reliable monitoring core; advanced visualizations, integrations and AI capabilities must not
+compromise correctness, security or operational trust.

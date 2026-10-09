@@ -1,0 +1,130 @@
+# WatchGrid runtime topology (Section 25.1 / 25.2).
+#
+#   cp .env.example .env                 # then set real secrets
+#   docker compose up --build            # dashboard on http://localhost:8080
+#   docker compose run --rm web python manage.py createsuperuser
+#
+# Networks: PostgreSQL and Redis live on an internal-only network. Only the monitoring
+# and notification workers join the "egress" network that can reach the internet.
+# Production must still add an outbound firewall/security group that blocks private
+# ranges and cloud metadata (Section 22.2); the application enforces the same policy.
+
+x-django: &django
+  build:
+    context: .
+    dockerfile: docker/django/Dockerfile
+  image: watchgrid-django:latest
+  env_file: .env
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks: [internal]
+
+x-worker: &worker
+  <<: *django
+  command: ["watchgrid-worker"]
+  healthcheck:
+    test: ["CMD-SHELL", "celery -A config inspect ping -d $$CELERY_WORKER_NAME@$$HOSTNAME --timeout 5 | grep -q pong"]
+    interval: 60s
+    timeout: 15s
+    retries: 3
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: watchgrid
+      POSTGRES_USER: watchgrid
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-watchgrid}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U watchgrid -d watchgrid"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [internal]
+
+  migrate:
+    <<: *django
+    restart: "no"
+    command: ["migrate"]
+    volumes: [static:/app/staticfiles]
+
+  web:
+    <<: *django
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    volumes: [static:/app/staticfiles]
+
+  celery_monitoring:
+    <<: *worker
+    environment:
+      CELERY_QUEUES: monitoring
+      CELERY_WORKER_NAME: monitoring
+      CELERY_CONCURRENCY: "16"
+    networks: [internal, egress]
+
+  celery_notifications:
+    <<: *worker
+    environment:
+      CELERY_QUEUES: notifications,default
+      CELERY_WORKER_NAME: notifications
+      CELERY_CONCURRENCY: "4"
+    networks: [internal, egress]
+
+  celery_ingestion:
+    <<: *worker
+    environment:
+      CELERY_QUEUES: ingestion
+      CELERY_WORKER_NAME: ingestion
+      CELERY_CONCURRENCY: "4"
+
+  celery_analytics:
+    <<: *worker
+    environment:
+      CELERY_QUEUES: analytics
+      CELERY_WORKER_NAME: analytics
+      CELERY_CONCURRENCY: "2"
+
+  celery_beat:
+    <<: *django
+    # Exactly one active scheduler (Section 25.1). Do not scale this service.
+    command: ["watchgrid-beat"]
+
+  nginx:
+    build:
+      context: docker/nginx
+    image: watchgrid-nginx:latest
+    depends_on: [web]
+    ports: ["8080:8080"]
+    volumes: [static:/srv/static:ro]
+    restart: unless-stopped
+    networks: [internal, public]
+
+networks:
+  internal:
+    internal: true
+  egress: {}
+  public: {}
+
+volumes:
+  postgres-data: {}
+  redis-data: {}
+  static: {}

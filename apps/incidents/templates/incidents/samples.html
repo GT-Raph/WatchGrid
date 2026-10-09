@@ -1,0 +1,23 @@
+{# Check samples stored on an incident's evidence. Context: samples, empty (message). #}
+{% if samples %}
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Checked at</th><th>Outcome</th><th class="numeric">HTTP</th><th class="numeric">Response</th><th>Error</th></tr>
+      </thead>
+      <tbody>
+        {% for sample in samples %}
+          <tr>
+            <td>{{ sample.checked_at|date:"M j, H:i:s T" }}</td>
+            <td>{% include "includes/status_badge.html" with value=sample.outcome %}</td>
+            <td class="numeric">{{ sample.status_code|default_if_none:"—" }}</td>
+            <td class="numeric">{% if sample.response_time_ms is not None %}{{ sample.response_time_ms }} ms{% else %}—{% endif %}</td>
+            <td class="wrap-cell">{{ sample.error_message|default:"—" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="empty-inline">{{ empty|default:"No samples." }}</div>
+{% endif %}

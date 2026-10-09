@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% comment %}
+  Single-form layout for signed-out and onboarding flows: sign in, register,
+  password recovery, email verification, first organization, invitation acceptance.
+  Context: form, title, subtitle, submit_label, next_url, auth_mode ("login" | "register").
+{% endcomment %}
+
+{% block body %}
+<div class="auth-layout">
+  <aside class="auth-story">
+    <a class="brand" href="{% url 'web:overview' %}">
+      <span class="brand-mark">{% icon "grid" %}</span>WatchGrid
+    </a>
+    <div>
+      <div class="auth-signal" aria-hidden="true">{% icon "pulse" %}</div>
+      <h2>Know what is up.<br>Understand what is down.</h2>
+      <p>Uptime, response times, and application errors.<br>One place to see what needs your attention.</p>
+      <div class="auth-checks" aria-hidden="true">
+        {% for _ in ".................." %}<i></i>{% endfor %}
+      </div>
+      <small>Monitoring runs continuously. Even when you log out.</small>
+    </div>
+    <span class="auth-footnote">Built for the people who keep services running.</span>
+  </aside>
+
+  <main id="main" class="auth-main">
+    <div class="auth-card">
+      {% include "includes/messages.html" %}
+      <h1>{{ title }}</h1>
+      <p class="muted">{{ subtitle }}</p>
+
+      <form method="post">
+        {% csrf_token %}
+        {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+        {% include "includes/form_fields.html" %}
+        <button class="button wide" type="submit">{{ submit_label }}</button>
+      </form>
+
+      <div class="auth-links">
+        {% if auth_mode == "login" %}
+          <a href="{% url 'web:forgot-password' %}">Forgot password?</a>
+          <span>New to WatchGrid? <a href="{% url 'web:register' %}?next={{ next_url|urlencode }}">Create an account</a></span>
+        {% elif auth_mode == "register" %}
+          <span>Already have an account? <a href="{% url 'web:login' %}?next={{ next_url|urlencode }}">Sign in</a></span>
+        {% else %}
+          <a href="{% url 'web:overview' %}">Return to WatchGrid</a>
+        {% endif %}
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

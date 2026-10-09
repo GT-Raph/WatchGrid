@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% comment %}
+  Signed-in application shell: navigation, top bar, flash messages, page heading,
+  optional filter bar, then the page content.
+
+  Blocks: subtitle, actions, content.
+  Context: title, section (active nav item), show_scope / show_range (filter bar).
+{% endcomment %}
+
+{% block body %}
+<div class="app-shell">
+  {% include "includes/sidebar.html" %}
+
+  <div class="workspace">
+    <header class="topbar">
+      <span>{{ organization.name }}</span>
+      <div class="topbar-actions">
+        <span class="muted">{{ request.user.timezone|default:"UTC" }}</span>
+        <button class="icon-button" type="button" data-theme-toggle aria-label="Switch color theme" hidden>
+          {% icon "sun" %}
+        </button>
+      </div>
+    </header>
+
+    <main id="main" class="main" tabindex="-1">
+      {% include "includes/messages.html" %}
+
+      <div class="page-heading">
+        <div>
+          <h1>{{ title }}</h1>
+          {% block subtitle %}
+            <p class="muted">{{ description|default:"A clear view of your service health." }}</p>
+          {% endblock %}
+        </div>
+        <div class="actions">{% block actions %}{% endblock %}</div>
+      </div>
+
+      {% if show_scope or show_range %}
+        {% include "includes/scope_bar.html" %}
+      {% endif %}
+
+      {% block content %}{% endblock %}
+
+      <footer class="page-footer">
+        <span>Snapshot {{ snapshot_at|date:"M j, Y · H:i:s T" }}</span>
+        <a href="{{ request.get_full_path }}">Refresh data</a>
+      </footer>
+    </main>
+  </div>
+</div>
+{% endblock %}

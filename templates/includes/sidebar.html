@@ -1,0 +1,30 @@
+<aside class="sidebar">
+  <a class="brand" href="{% url 'web:overview' %}">
+    <span class="brand-mark">{% icon "grid" %}</span>WatchGrid
+  </a>
+
+  <details class="navigation" open>
+    <summary>Navigation</summary>
+    <nav aria-label="Main navigation">
+      {% for route, name, glyph in navigation %}
+        <a href="{% url 'web:'|add:route %}"
+           class="nav-item{% if section == route %} active{% endif %}"
+           {% if section == route %}aria-current="page"{% endif %}>
+          {% icon glyph %}{{ name }}
+        </a>
+      {% endfor %}
+    </nav>
+  </details>
+
+  <div class="sidebar-bottom">
+    <p>Monitoring continues<br>when you are away.</p>
+    <a class="account" href="{% url 'web:settings' %}">
+      <span class="avatar">{{ request.user.get_short_name|first|upper }}</span>
+      <span>{{ request.user.get_short_name }}<small>{{ request.user.email }}</small></span>
+    </a>
+    <form method="post" action="{% url 'web:logout' %}">
+      {% csrf_token %}
+      <button class="signout" type="submit">Sign out</button>
+    </form>
+  </div>
+</aside>

@@ -1,0 +1,58 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}<p class="muted">Service health at a glance. Start with what needs attention.</p>{% endblock %}
+
+{% block actions %}
+  {% if capabilities.monitor_manage %}
+    <a class="button" href="{% url 'web:monitor-new' %}">{% icon "plus" %}Add monitor</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% include "includes/metrics.html" %}
+
+{% if summary.monitors.down %}
+  <div class="notice warning">
+    {{ summary.monitors.down }} monitor{{ summary.monitors.down|pluralize }} down.
+    <a href="{% url 'web:incidents' %}">Review active incidents</a>
+  </div>
+{% elif summary.monitors.total and not summary.checks_in_range %}
+  <div class="notice">No scheduled checks in this period. Check worker status and try a wider period.</div>
+{% endif %}
+
+{% include "includes/health_grid.html" %}
+
+<section class="panel">
+  <div class="panel-heading">
+    <h2>Recent incidents</h2>
+    <a href="{% url 'web:incidents' %}">View all incidents</a>
+  </div>
+  {% if summary.recent_incidents %}
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Recent incidents">
+      <table>
+        <thead>
+          <tr><th>Incident</th><th>Severity</th><th>Status</th><th>Detected</th></tr>
+        </thead>
+        <tbody>
+          {% for incident in summary.recent_incidents %}
+            <tr>
+              <td>
+                <a class="row-title" href="{% url 'web:incident-detail' incident.id %}">{{ incident.title }}</a>
+                <small>{{ incident.project.name }}</small>
+              </td>
+              <td>{% include "includes/status_badge.html" with value=incident.severity %}</td>
+              <td>{% include "includes/status_badge.html" with value=incident.status %}</td>
+              <td>{{ incident.detected_at|date:"M j, H:i" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-inline">
+      <strong>No incidents in this period</strong>
+      <span>Confirmed failures will appear here with their evidence and timeline.</span>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

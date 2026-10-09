@@ -1,0 +1,26 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}
+  <p class="muted">Availability and latency for the selected period. Uptime uses scheduled checks only.</p>
+{% endblock %}
+
+{% block actions %}
+  <a class="button secondary" href="{% querystring format='csv' %}">Export CSV</a>
+{% endblock %}
+
+{% block content %}
+{% include "includes/metrics.html" %}
+
+<div class="report-context">
+  <p><strong>{{ summary.checks_in_range }}</strong> scheduled checks</p>
+  <p><strong>{{ summary.avg_response_time_ms|default_if_none:"—" }} ms</strong> average response</p>
+  <p><strong>{{ summary.errors.unresolved_groups }}</strong> unresolved error groups</p>
+</div>
+
+{% include "includes/health_grid.html" %}
+
+<p class="muted measure">
+  No data means no counted checks were recorded for that period. Manual checks and platform errors do not
+  count toward uptime. Long periods use hourly aggregates.
+</p>
+{% endblock %}

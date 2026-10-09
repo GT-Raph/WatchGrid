@@ -1,0 +1,55 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}<p class="muted">Your profile, account security, and organization.</p>{% endblock %}
+
+{% block content %}
+<div class="two-columns">
+  <section class="panel">
+    <div class="panel-heading"><h2>Profile</h2></div>
+    <form class="panel-form" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="profile">
+      <p><strong>{{ request.user.email }}</strong></p>
+      {% include "includes/form_fields.html" with form=profile_form %}
+      <button class="button">Save profile</button>
+    </form>
+    {% if not request.user.is_email_verified %}
+      <form class="panel-form" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="resend">
+        <p>Your email address has not been verified.</p>
+        <button class="button secondary">Resend verification</button>
+      </form>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading"><h2>Change password</h2></div>
+    <form class="panel-form" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="password">
+      {% include "includes/form_fields.html" with form=password_form %}
+      <button class="button">Save password</button>
+    </form>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="panel-heading"><h2>Organization</h2></div>
+  <div class="panel-form">
+    <p><strong>{{ organization.name }}</strong></p>
+    <div class="actions">
+      {% if capabilities.org_manage %}
+        <a class="button secondary" href="{% url 'web:organization-settings' %}">Edit organization</a>
+      {% endif %}
+      {% if capabilities.audit_view %}
+        <a class="button secondary" href="{% url 'web:audit' %}">View audit log</a>
+      {% endif %}
+      <a class="button secondary" href="{% url 'web:welcome' %}">Create organization</a>
+      {% if capabilities.org_archive %}
+        <a class="danger-link" href="{% url 'web:organization-archive' %}">Archive organization</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

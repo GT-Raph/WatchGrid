@@ -1,0 +1,57 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}<p class="muted measure">{{ group.normalized_message }}</p>{% endblock %}
+
+{% block actions %}
+  <a class="button secondary" href="{% url 'web:errors' %}">All errors</a>
+{% endblock %}
+
+{% block content %}
+<div class="detail-status">
+  {% include "includes/status_badge.html" with value=group.status %}
+  <span>{{ group.project.name }}, {{ group.environment }}</span>
+</div>
+
+<section class="metrics detail-metrics">
+  <div><span>Occurrences</span><strong>{{ group.occurrence_count }}</strong></div>
+  <div><span>Affected users</span><strong>{{ group.affected_users }}</strong></div>
+  <div><span>Regressions</span><strong>{{ group.regression_count }}</strong></div>
+  <div><span>Last release</span><strong class="metric-uptime">{{ group.last_release|default:"Unknown" }}</strong></div>
+</section>
+
+{% if capabilities.errors_manage %}
+  <form method="post" class="list-filters">
+    {% csrf_token %}
+    <label>
+      Status
+      <select name="status">
+        {% for value, name in statuses %}
+          <option value="{{ value }}" {% if value == group.status %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button class="button">Update error status</button>
+  </form>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-heading">
+    <h2>Stored occurrences</h2>
+    <span class="muted">{{ rows.paginator.count }} events</span>
+  </div>
+  {% for event in rows %}
+    <details class="event-detail" {% if forloop.first %}open{% endif %}>
+      <summary>{{ event.occurred_at|date:"M j, H:i:s T" }}: {{ event.message|truncatechars:100 }}</summary>
+      <dl class="facts">
+        <div><dt>Endpoint</dt><dd>{{ event.http_method }} {{ event.endpoint|default:"Not recorded" }}</dd></div>
+        <div><dt>Release</dt><dd>{{ event.application_version|default:"Not recorded" }}</dd></div>
+        <div><dt>User reference</dt><dd class="url">{{ event.user_reference_hash|default:"Anonymous" }}</dd></div>
+      </dl>
+      <pre class="evidence">{{ event.stack_trace|default:"No stack trace recorded." }}</pre>
+    </details>
+  {% empty %}
+    <div class="empty-inline">No raw occurrences retained. Group totals remain available.</div>
+  {% endfor %}
+</section>
+{% include "includes/pagination.html" %}
+{% endblock %}

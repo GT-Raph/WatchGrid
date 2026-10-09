@@ -1,0 +1,108 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}<p class="muted">{{ incident.project.name }}{% if incident.summary %}: {{ incident.summary }}{% endif %}</p>{% endblock %}
+
+{% block actions %}
+  <a class="button secondary" href="{% url 'web:incidents' %}">All incidents</a>
+  {% if incident.monitor %}
+    <a class="button secondary" href="{% url 'web:monitor-detail' incident.monitor_id %}">View monitor</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="detail-status">
+  {% include "includes/status_badge.html" with value=incident.severity %}
+  {% include "includes/status_badge.html" with value=incident.status %}
+  <span>Duration {{ incident.duration_seconds|duration }}{% if incident.is_active %} so far{% endif %}, counted from the first failed check</span>
+</div>
+
+<div class="two-columns">
+  <section class="panel">
+    <div class="panel-heading"><h2>Incident timeline</h2></div>
+    <ol class="timeline">
+      {% for event in events %}
+        <li>
+          <span class="timeline-dot" aria-hidden="true"></span>
+          <strong>{{ event.get_kind_display }}</strong>
+          <time datetime="{{ event.created_at|date:'c' }}">{{ event.created_at|date:"M j, H:i:s T" }}</time>
+          {% if event.message %}<p>{{ event.message|linebreaksbr }}</p>{% endif %}
+          <small>{{ event.actor.email|default:"WatchGrid" }}{% if event.to_status %}, now {{ event.to_status|label|lower }}{% endif %}</small>
+        </li>
+      {% empty %}
+        <li>No timeline entries yet.</li>
+      {% endfor %}
+    </ol>
+    {% if capabilities.incident_manage %}
+      <form class="panel-form" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="note">
+        <h3>Add an operator note</h3>
+        {% include "includes/form_fields.html" with form=note_form %}
+        <button class="button">Add note</button>
+      </form>
+    {% endif %}
+  </section>
+
+  <div>
+    <section class="panel">
+      <div class="panel-heading"><h2>Details</h2></div>
+      <dl class="facts">
+        <div><dt>First failed check</dt><dd>{{ incident.detected_at|date:"M j, H:i:s T" }}</dd></div>
+        <div><dt>Confirmed as an outage</dt><dd>{{ incident.confirmed_at|date:"M j, H:i:s T" }}</dd></div>
+        <div><dt>Acknowledged</dt><dd>{{ incident.acknowledged_at|date:"M j, H:i:s T"|default:"Not yet" }}</dd></div>
+        <div><dt>Resolved</dt><dd>{{ incident.resolved_at|date:"M j, H:i:s T"|default:"Not yet" }}</dd></div>
+        <div><dt>Resolution</dt><dd>{{ incident.get_resolution_type_display }}</dd></div>
+        <div><dt>Failed checks</dt><dd>{{ incident.failure_count }}</dd></div>
+      </dl>
+      {% if capabilities.incident_manage and incident.is_active %}
+        <form class="panel-form" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="status">
+          <h3>Update status</h3>
+          {% include "includes/form_fields.html" with form=status_form %}
+          <button class="button">Update status</button>
+        </form>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-heading">
+    <h2>Failure evidence</h2>
+    <span class="muted">Checks that confirmed the outage, newest first</span>
+  </div>
+  {% include "incidents/samples.html" with samples=failure_samples empty="No failed checks were attached to this incident." %}
+</section>
+
+{% if recovery_samples %}
+  <section class="panel">
+    <div class="panel-heading"><h2>Recovery evidence</h2></div>
+    {% include "incidents/samples.html" with samples=recovery_samples %}
+  </section>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-heading"><h2>Notification delivery</h2></div>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Recipient</th><th>Channel</th><th>Status</th><th>Sent</th><th>Detail</th></tr>
+      </thead>
+      <tbody>
+        {% for notification in notifications %}
+          <tr>
+            <td>{{ notification.recipient }}</td>
+            <td>{{ notification.channel|label }}</td>
+            <td>{{ notification.status|label }}</td>
+            <td>{{ notification.sent_at|date:"M j, H:i"|default:"—" }}</td>
+            <td>{{ notification.last_error|default:notification.status_reason|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">No notifications recorded.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

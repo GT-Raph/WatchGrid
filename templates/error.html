@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% comment %}Friendly page for domain errors raised by service functions (see common.utilities.web.page).{% endcomment %}
+
+{% block body %}
+<main id="main" class="error-page">
+  <h1>{% block heading %}{{ status_code }} · {{ title }}{% endblock %}</h1>
+  <p>{% block message %}{{ error }}{% endblock %}</p>
+  <a class="button" href="{% url 'web:overview' %}">Return to overview</a>
+</main>
+{% endblock %}

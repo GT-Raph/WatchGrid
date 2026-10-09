@@ -1,0 +1,89 @@
+{% comment %}
+  The monitor × time grid. Cells are aligned by wall-clock time across rows, so an
+  outage that hits several services shows up as a vertical stripe. Each cell's height
+  encodes its state as well as its color (failed tall, degraded medium, healthy low).
+  Context: grid (analytics.services.status_grid), capabilities, projects.
+{% endcomment %}
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Service health</h2>
+      <p class="muted">
+        {{ grid.range.start|date:"M j, H:i" }} – {{ grid.range.end|date:"M j, H:i T" }}.
+        Each cell spans {{ grid.bucket_seconds|duration }}.
+      </p>
+    </div>
+    <div class="legend">
+      <span><i class="cell good"></i>Available</span>
+      <span><i class="cell degraded"></i>Degraded</span>
+      <span><i class="cell failure"></i>Failed</span>
+      <span><i class="cell empty"></i>No data</span>
+    </div>
+  </div>
+
+  {% if grid.monitors %}
+    <div class="table-scroll" role="region" aria-label="Monitor health over time" tabindex="0">
+      <table class="health-table">
+        <thead>
+          <tr>
+            <th>Monitor</th>
+            <th>Status</th>
+            <th class="grid-column">Check history</th>
+            <th class="numeric">Uptime</th>
+            <th class="numeric">Average latency</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for monitor in grid.monitors %}
+            <tr>
+              <td>
+                <a class="row-title" href="{% url 'web:monitor-detail' monitor.id %}">{{ monitor.name }}</a>
+                <small>{{ monitor.project.name }}</small>
+              </td>
+              <td>{% include "includes/status_badge.html" with value=monitor.status %}</td>
+              <td>
+                <div class="health-strip">
+                  {% for cell in monitor.cells %}
+                    {% if not cell %}
+                      <span class="cell empty" role="img" aria-label="Period {{ forloop.counter }}: no data" title="No data"></span>
+                    {% else %}
+                      <span class="cell {% if cell.1 %}failure{% elif cell.2 %}degraded{% else %}good{% endif %}"
+                            role="img"
+                            aria-label="Period {{ forloop.counter }}: {{ cell.0 }} checks, {{ cell.1 }} failed, {{ cell.2 }} degraded"
+                            title="{{ cell.0 }} checks, {{ cell.1 }} failed, {{ cell.2 }} degraded"></span>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              </td>
+              <td class="numeric">{{ monitor.uptime_percent|percent }}</td>
+              <td class="numeric">
+                {% if monitor.avg_response_time_ms is not None %}
+                  {{ monitor.avg_response_time_ms }} <span class="muted">ms</span>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      {% icon "pulse" %}
+      <h3>No monitors yet</h3>
+      <p>Add your first public website or API to start collecting uptime and response times.</p>
+      {% if capabilities.monitor_manage %}
+        {% if projects %}
+          <a class="button" href="{% url 'web:monitor-new' %}">Add a monitor</a>
+        {% else %}
+          <a class="button" href="{% url 'web:project-new' %}">Create a project</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if grid.truncated %}
+    <p class="panel-note">
+      Showing the first {{ grid.monitors|length }} of {{ grid.total_monitors }} monitors. Filter by project to see more.
+    </p>
+  {% endif %}
+</section>

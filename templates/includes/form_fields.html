@@ -1,0 +1,38 @@
+{% comment %}
+  Accessible form fields: an error summary that links to each invalid field, visible
+  labels, help text and per-field errors. Usage: {% include "includes/form_fields.html" with form=... %}
+{% endcomment %}
+{% if form.errors %}
+  <div class="error-summary" tabindex="-1" data-error-summary role="alert">
+    <strong>Check the highlighted fields.</strong>
+    <ul>
+      {% for field in form %}
+        {% for error in field.errors %}
+          <li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>
+        {% endfor %}
+      {% endfor %}
+      {% for error in form.non_field_errors %}
+        <li>{{ error }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+{% for field in form %}
+  {% if field.is_hidden %}
+    {{ field }}
+  {% else %}
+    <div class="field{% if field.errors %} invalid{% endif %}{% if field.field.widget.input_type == 'checkbox' %} checkbox-field{% endif %}">
+      <label for="{{ field.id_for_label }}">
+        {{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}
+      </label>
+      {{ field }}
+      {% if field.help_text %}
+        <div class="help" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>
+      {% endif %}
+      {% for error in field.errors %}
+        <div class="field-error" id="{{ field.auto_id }}_error">{{ error }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endfor %}

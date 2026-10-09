@@ -1,0 +1,343 @@
+[
+{
+  "model": "accounts.user",
+  "pk": "938aa4d1-1e14-577e-9baa-144fd7d77c80",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$wcnk6GBHd7zAyOyRpbeYvD$H+QdrfrucXgSsOQvqCpVBuvQFDe+9gGgoKlvAVyO4Tg=",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "demo@watchgrid.local",
+    "full_name": "Demo Operator",
+    "timezone": "UTC",
+    "is_active": true,
+    "is_staff": false,
+    "email_verified_at": "2026-10-01T09:00:00Z",
+    "date_joined": "2026-10-01T09:00:00Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "organizations.organization",
+  "pk": "6ac1d9a9-896d-5abf-89cf-b9943c58c715",
+  "fields": {
+    "created_at": "2026-10-01T09:00:00Z",
+    "updated_at": "2026-10-01T09:00:00Z",
+    "name": "Demo Org",
+    "slug": "demo",
+    "owner": "938aa4d1-1e14-577e-9baa-144fd7d77c80",
+    "archived_at": null
+  }
+},
+{
+  "model": "organizations.membership",
+  "pk": "c8cfa962-4469-51d2-9194-3582fc806f5b",
+  "fields": {
+    "created_at": "2026-10-01T09:00:00Z",
+    "updated_at": "2026-10-01T09:00:00Z",
+    "organization": "6ac1d9a9-896d-5abf-89cf-b9943c58c715",
+    "user": "938aa4d1-1e14-577e-9baa-144fd7d77c80",
+    "role": "owner"
+  }
+},
+{
+  "model": "projects.project",
+  "pk": "c4be6cd6-e754-5774-be81-041d230eefcb",
+  "fields": {
+    "created_at": "2026-10-01T09:00:00Z",
+    "updated_at": "2026-10-01T09:00:00Z",
+    "organization": "6ac1d9a9-896d-5abf-89cf-b9943c58c715",
+    "name": "Internal Tools",
+    "slug": "internal-tools",
+    "description": "Search and back-office services.",
+    "environment": "staging",
+    "status": "active",
+    "archived_at": null,
+    "created_by": "938aa4d1-1e14-577e-9baa-144fd7d77c80"
+  }
+},
+{
+  "model": "projects.project",
+  "pk": "3ebe9595-5992-5d59-b78f-f3fd8c59c6dc",
+  "fields": {
+    "created_at": "2026-10-01T09:00:00Z",
+    "updated_at": "2026-10-01T09:00:00Z",
+    "organization": "6ac1d9a9-896d-5abf-89cf-b9943c58c715",
+    "name": "Storefront",
+    "slug": "storefront",
+    "description": "Customer-facing shop, checkout and payments.",
+    "environment": "production",
+    "status": "active",
+    "archived_at": null,
+    "created_by": "938aa4d1-1e14-577e-9baa-144fd7d77c80"
+  }
+},
+{
+  "model": "monitors.monitor",
+  "pk": "2864def2-3033-5597-9b59-1fe57744606f",
+  "fields": {
+    "created_at": "2026-10-01T09:00:00Z",
+    "updated_at": "2026-10-01T09:00:00Z",
+    "project": "3ebe9595-5992-5d59-b78f-f3fd8c59c6dc",
+    "name": "Checkout API",
+    "monitor_type": "api",
+    "url": "https://example.net/",
+    "http_method": "GET",
+    "interval_seconds": 60,
+    "timeout_seconds": 10,
+    "expected_status": "200-299",
+    "response_time_threshold_ms": null,
+    "failure_threshold": 3,
+    "recovery_threshold": 2,
+    "follow_redirects": true,
+    "max_redirects": 5,
+    "headers_encrypted": "",
+    "body": "",
+    "assertion_mode": "none",
+    "assertion_text": "",
+    "status": "unknown",
+    "is_active": true,
+    "next_check_at": "2026-10-01T09:00:00Z",
+    "consecutive_failures": 0,
+    "consecutive_successes": 0,
+    "consecutive_soft_failures": 0,
+    "failing_since": null,
+    "degraded_since": null,
+    "last_checked_at": null,
+    "last_status_change_at": null,
+    "last_response_time_ms": null,
+    "last_status_code": null,
+    "last_error_category": "",
+    "tls_expires_at": null,
+    "archived_at": null,
+    "created_by": "938aa4d1-1e14-577e-9baa-144fd7d77c80"
+  }
+},
+{
+  "model": "monitors.monitor",
+  "pk": "1e69637d-a3aa-5779-af82-ec2ad2d575cb",
+  "fields": {
+    "created_at": "2026-10-01T09:00:00Z",
+    "updated_at": "2026-10-01T09:00:00Z",
+    "project": "3ebe9595-5992-5d59-b78f-f3fd8c59c6dc",
+    "name": "Customer Portal",
+    "monitor_type": "http",
+    "url": "https://example.org/",
+    "http_method": "GET",
+    "interval_seconds": 60,
+    "timeout_seconds": 10,
+    "expected_status": "200-299",
+    "response_time_threshold_ms": 900,
+    "failure_threshold": 3,
+    "recovery_threshold": 2,
+    "follow_redirects": true,
+    "max_redirects": 5,
+    "headers_encrypted": "",
+    "body": "",
+    "assertion_mode": "none",
+    "assertion_text": "",
+    "status": "unknown",
+    "is_active": true,
+    "next_check_at": "2026-10-01T09:00:00Z",
+    "consecutive_failures": 0,
+    "consecutive_successes": 0,
+    "consecutive_soft_failures": 0,
+    "failing_since": null,
+    "degraded_since": null,
+    "last_checked_at": null,
+    "last_status_change_at": null,
+    "last_response_time_ms": null,
+    "last_status_code": null,
+    "last_error_category": "",
+    "tls_expires_at": null,
+    "archived_at": null,
+    "created_by": "938aa4d1-1e14-577e-9baa-144fd7d77c80"
+  }
+},
+{
+  "model": "monitors.monitor",
+  "pk": "d544752f-b4c6-5df7-80c0-b09b4c5b3b13",
+  "fields": {
+    "created_at": "2026-10-01T09:00:00Z",
+    "updated_at": "2026-10-01T09:00:00Z",
+    "project": "3ebe9595-5992-5d59-b78f-f3fd8c59c6dc",
+    "name": "Main Production Site",
+    "monitor_type": "http",
+    "url": "https://example.com/",
+    "http_method": "GET",
+    "interval_seconds": 60,
+    "timeout_seconds": 10,
+    "expected_status": "200-299",
+    "response_time_threshold_ms": null,
+    "failure_threshold": 3,
+    "recovery_threshold": 2,
+    "follow_redirects": true,
+    "max_redirects": 5,
+    "headers_encrypted": "",
+    "body": "",
+    "assertion_mode": "none",
+    "assertion_text": "",
+    "status": "unknown",
+    "is_active": true,
+    "next_check_at": "2026-10-01T09:00:00Z",
+    "consecutive_failures": 0,
+    "consecutive_successes": 0,
+    "consecutive_soft_failures": 0,
+    "failing_since": null,
+    "degraded_since": null,
+    "last_checked_at": null,
+    "last_status_change_at": null,
+    "last_response_time_ms": null,
+    "last_status_code": null,
+    "last_error_category": "",
+    "tls_expires_at": null,
+    "archived_at": null,
+    "created_by": "938aa4d1-1e14-577e-9baa-144fd7d77c80"
+  }
+},
+{
+  "model": "monitors.monitor",
+  "pk": "eb8c293a-1707-5c75-9943-d4960f4ba9f5",
+  "fields": {
+    "created_at": "2026-10-01T09:00:00Z",
+    "updated_at": "2026-10-01T09:00:00Z",
+    "project": "3ebe9595-5992-5d59-b78f-f3fd8c59c6dc",
+    "name": "Payments Webhook",
+    "monitor_type": "http",
+    "url": "https://www.iana.org/help/example-domains",
+    "http_method": "GET",
+    "interval_seconds": 300,
+    "timeout_seconds": 10,
+    "expected_status": "200-299",
+    "response_time_threshold_ms": null,
+    "failure_threshold": 3,
+    "recovery_threshold": 2,
+    "follow_redirects": true,
+    "max_redirects": 5,
+    "headers_encrypted": "",
+    "body": "",
+    "assertion_mode": "none",
+    "assertion_text": "",
+    "status": "unknown",
+    "is_active": true,
+    "next_check_at": "2026-10-01T09:00:00Z",
+    "consecutive_failures": 0,
+    "consecutive_successes": 0,
+    "consecutive_soft_failures": 0,
+    "failing_since": null,
+    "degraded_since": null,
+    "last_checked_at": null,
+    "last_status_change_at": null,
+    "last_response_time_ms": null,
+    "last_status_code": null,
+    "last_error_category": "",
+    "tls_expires_at": null,
+    "archived_at": null,
+    "created_by": "938aa4d1-1e14-577e-9baa-144fd7d77c80"
+  }
+},
+{
+  "model": "monitors.monitor",
+  "pk": "a8fc6f8a-d345-57cd-88b0-b3fde4191b26",
+  "fields": {
+    "created_at": "2026-10-01T09:00:00Z",
+    "updated_at": "2026-10-01T09:00:00Z",
+    "project": "c4be6cd6-e754-5774-be81-041d230eefcb",
+    "name": "Search Service",
+    "monitor_type": "http",
+    "url": "https://www.example.com/",
+    "http_method": "GET",
+    "interval_seconds": 300,
+    "timeout_seconds": 10,
+    "expected_status": "200-299",
+    "response_time_threshold_ms": null,
+    "failure_threshold": 3,
+    "recovery_threshold": 2,
+    "follow_redirects": true,
+    "max_redirects": 5,
+    "headers_encrypted": "",
+    "body": "",
+    "assertion_mode": "none",
+    "assertion_text": "",
+    "status": "unknown",
+    "is_active": true,
+    "next_check_at": "2026-10-01T09:00:00Z",
+    "consecutive_failures": 0,
+    "consecutive_successes": 0,
+    "consecutive_soft_failures": 0,
+    "failing_since": null,
+    "degraded_since": null,
+    "last_checked_at": null,
+    "last_status_change_at": null,
+    "last_response_time_ms": null,
+    "last_status_code": null,
+    "last_error_category": "",
+    "tls_expires_at": null,
+    "archived_at": null,
+    "created_by": "938aa4d1-1e14-577e-9baa-144fd7d77c80"
+  }
+},
+{
+  "model": "notifications.alertpolicy",
+  "pk": "cc949b92-c201-50d2-956f-4dc87edbc394",
+  "fields": {
+    "created_at": "2026-10-01T09:00:00Z",
+    "updated_at": "2026-10-01T09:00:00Z",
+    "project": "3ebe9595-5992-5d59-b78f-f3fd8c59c6dc",
+    "name": "Default — email owners and administrators",
+    "enabled": true,
+    "monitor": null,
+    "event_types": [
+      "monitor_down",
+      "monitor_recovered",
+      "error_new"
+    ],
+    "min_severity": "info",
+    "delay_seconds": 0,
+    "repeat_interval_minutes": 0,
+    "channels": [
+      {
+        "type": "email",
+        "to": [],
+        "to_roles": [
+          "owner",
+          "admin"
+        ]
+      }
+    ],
+    "created_by": null
+  }
+},
+{
+  "model": "notifications.alertpolicy",
+  "pk": "8351f6f7-7041-5e1c-9dfc-0de51fa8b8f1",
+  "fields": {
+    "created_at": "2026-10-01T09:00:00Z",
+    "updated_at": "2026-10-01T09:00:00Z",
+    "project": "c4be6cd6-e754-5774-be81-041d230eefcb",
+    "name": "Default — email owners and administrators",
+    "enabled": true,
+    "monitor": null,
+    "event_types": [
+      "monitor_down",
+      "monitor_recovered",
+      "error_new"
+    ],
+    "min_severity": "info",
+    "delay_seconds": 0,
+    "repeat_interval_minutes": 0,
+    "channels": [
+      {
+        "type": "email",
+        "to": [],
+        "to_roles": [
+          "owner",
+          "admin"
+        ]
+      }
+    ],
+    "created_by": null
+  }
+}
+]
+

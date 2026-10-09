@@ -1,0 +1,21 @@
+{% extends "dashboard_base.html" %}
+
+{% comment %}
+  Generic single-form page for create/edit/confirm flows.
+  Context: form, submit_label, cancel_url, description.
+{% endcomment %}
+
+{% block subtitle %}<p class="muted measure">{{ description }}</p>{% endblock %}
+
+{% block content %}
+<section class="panel form-panel">
+  <form method="post">
+    {% csrf_token %}
+    {% include "includes/form_fields.html" %}
+    <div class="form-actions">
+      <button class="button" type="submit">{{ submit_label|default:"Save changes" }}</button>
+      <a class="button secondary" href="{{ cancel_url }}">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

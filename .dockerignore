@@ -1,0 +1,20 @@
+# Build context is the repository root; ship only what the runtime needs.
+.git
+.github
+.venv
+.claude
+.qodo
+.playwright-mcp
+tmp
+docs
+tests
+fixtures
+media/*
+staticfiles
+db.sqlite3
+.env
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+*.log

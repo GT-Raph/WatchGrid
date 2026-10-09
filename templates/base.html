@@ -1,0 +1,19 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}{{ title }}{% endblock %} · WatchGrid</title>
+  <link rel="icon" href="{% static 'images/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {# Applied before first paint so a stored dark/light choice never flashes. #}
+  <script src="{% static 'js/theme.js' %}"></script>
+  <script defer src="{% static 'js/app.js' %}"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  {% block body %}{% endblock %}
+</body>
+</html>

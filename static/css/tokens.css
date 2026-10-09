@@ -1,0 +1,162 @@
+/* WatchGrid design tokens.
+   Brand continuity with the specification document: navy ink navigation, a cool
+   page, one accent blue. Status hues are reserved for state and always paired
+   with an icon and a label. Grid hues were validated for CVD separation with
+   cell height as the secondary encoding (see docs/design.md). */
+
+:root {
+  color-scheme: light;
+  --font-sans: "Instrument Sans Variable", "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  /* Type scale: 1.2 ratio around a 15px base */
+  --text-xs: 0.78rem;
+  /* 12.5 */
+  --text-sm: 0.867rem;
+  /* 13 */
+  --text-md: 0.9375rem;
+  /* 15 */
+  --text-lg: 1.125rem;
+  /* 18 */
+  --text-xl: 1.375rem;
+  /* 22 */
+  --text-2xl: 1.75rem;
+  /* 28 */
+  --text-hero: clamp(2rem, 1.2rem + 2.6vw, 3.1rem);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  /* Radius follows hierarchy: containers > controls > chips > data marks */
+  --radius-panel: 12px;
+  --radius-control: 7px;
+  --radius-chip: 5px;
+  --radius-mark: 2px;
+  --page: #eef1f6;
+  --surface: #ffffff;
+  --surface-sunken: #f5f7fa;
+  --surface-hover: #f0f3f8;
+  --ink: #142038;
+  --ink-2: #4b566b;
+  --ink-3: #737d90;
+  --line: #e0e5ed;
+  --line-strong: #c7cfdb;
+  --nav: #13203b;
+  --nav-ink: #c3cde0;
+  --nav-ink-strong: #ffffff;
+  --nav-hover: #1b2b4d;
+  --nav-active: #233863;
+  --accent: #2a6fdb;
+  --accent-strong: #1f58b5;
+  --accent-ink: #ffffff;
+  --accent-wash: #e7effc;
+  --focus: #2a6fdb;
+  /* Status (fixed) */
+  --good: #0ca30c;
+  --warning: #e09c00;
+  --serious: #e5743f;
+  --critical: #d03b3b;
+  --info: #2a6fdb;
+  --neutral: #8a93a3;
+  --critical-wash: #fcecec;
+  --warning-wash: #fdf5e1;
+  --good-ink: #0b6b1d;
+  --critical-ink: #a62424;
+  /* Grid cells (validated set) */
+  --cell-ok: #9bd3a0;
+  --cell-degraded: #e9a20e;
+  --cell-failed: #c8302f;
+  --cell-empty: #d6dce6;
+  /* Chart chrome */
+  --series-1: #2a78d6;
+  --series-1-wash: rgba(42, 120, 214, 0.1);
+  --grid-line: #e7ebf1;
+  --axis-line: #c7cfdb;
+  --shadow-pop: 0 10px 30px rgba(20, 32, 56, 0.16), 0 1px 3px rgba(20, 32, 56, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0b1220;
+    --surface: #111a2b;
+    --surface-sunken: #0e1626;
+    --surface-hover: #162238;
+    --ink: #edf1f8;
+    --ink-2: #b3bdcd;
+    --ink-3: #8390a6;
+    --line: #1f2b40;
+    --line-strong: #2d3b55;
+    --nav: #090f1c;
+    --nav-ink: #a9b5cc;
+    --nav-hover: #131d33;
+    --nav-active: #1b2a49;
+    --accent: #5b95ee;
+    --accent-strong: #7aaaf2;
+    --accent-ink: #0b1220;
+    --accent-wash: #16284a;
+    --focus: #7aaaf2;
+    --good: #2fbf3a;
+    --warning: #f0b429;
+    --serious: #ef8a5e;
+    --critical: #ef5a55;
+    --info: #5b95ee;
+    --neutral: #7d889c;
+    --critical-wash: #2c1820;
+    --warning-wash: #2a2416;
+    --good-ink: #7ad98a;
+    --critical-ink: #ff9a95;
+    --cell-ok: #2c6e40;
+    --cell-degraded: #e8a71c;
+    --cell-failed: #f0625c;
+    --cell-empty: #26324a;
+    --series-1: #3987e5;
+    --series-1-wash: rgba(57, 135, 229, 0.14);
+    --grid-line: #1c2740;
+    --axis-line: #2d3b55;
+    --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0b1220;
+  --surface: #111a2b;
+  --surface-sunken: #0e1626;
+  --surface-hover: #162238;
+  --ink: #edf1f8;
+  --ink-2: #b3bdcd;
+  --ink-3: #8390a6;
+  --line: #1f2b40;
+  --line-strong: #2d3b55;
+  --nav: #090f1c;
+  --nav-ink: #a9b5cc;
+  --nav-hover: #131d33;
+  --nav-active: #1b2a49;
+  --accent: #5b95ee;
+  --accent-strong: #7aaaf2;
+  --accent-ink: #0b1220;
+  --accent-wash: #16284a;
+  --focus: #7aaaf2;
+  --good: #2fbf3a;
+  --warning: #f0b429;
+  --serious: #ef8a5e;
+  --critical: #ef5a55;
+  --info: #5b95ee;
+  --neutral: #7d889c;
+  --critical-wash: #2c1820;
+  --warning-wash: #2a2416;
+  --good-ink: #7ad98a;
+  --critical-ink: #ff9a95;
+  --cell-ok: #2c6e40;
+  --cell-degraded: #e8a71c;
+  --cell-failed: #f0625c;
+  --cell-empty: #26324a;
+  --series-1: #3987e5;
+  --series-1-wash: rgba(57, 135, 229, 0.14);
+  --grid-line: #1c2740;
+  --axis-line: #2d3b55;
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+}

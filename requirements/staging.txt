@@ -1,0 +1,2 @@
+# Staging mirrors production exactly so release candidates are verified on the same stack.
+-r production.txt

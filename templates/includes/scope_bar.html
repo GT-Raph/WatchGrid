@@ -1,0 +1,45 @@
+{% comment %}
+  One filter row above everything it scopes (organization, project, period).
+  Selections are remembered in the session by common.utilities.web.resolve_scope.
+{% endcomment %}
+<form class="scope-bar" method="get" aria-label="Dashboard filters">
+  {% if show_scope %}
+    <label>
+      Organization
+      <select name="organization">
+        {% for item in organizations %}
+          <option value="{{ item.pk }}" {% if item.pk == organization.pk %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Project
+      <select name="project">
+        <option value="">All projects</option>
+        {% for item in projects %}
+          <option value="{{ item.pk }}" {% if item.pk == project.pk %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  {% endif %}
+
+  {% if show_range %}
+    <label>
+      Period
+      <select name="range">
+        {% for value, label in ranges %}
+          <option value="{{ value }}" {% if selected_range == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+        <option value="custom" {% if selected_range == "custom" %}selected{% endif %}>Custom range</option>
+      </select>
+    </label>
+    <details class="custom-range" {% if selected_range == "custom" %}open{% endif %}>
+      <summary>Custom dates</summary>
+      <label>From <input name="start" type="datetime-local" value="{{ request.GET.start }}"></label>
+      <label>To <input name="end" type="datetime-local" value="{{ request.GET.end }}"></label>
+      <small>Custom dates are in UTC.</small>
+    </details>
+  {% endif %}
+
+  <button class="button secondary" type="submit">Apply filters</button>
+</form>

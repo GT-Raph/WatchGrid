@@ -1,0 +1,76 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}<p class="muted">Give your teammates the access they need.</p>{% endblock %}
+
+{% block actions %}
+  {% if capabilities.members_manage %}
+    <a class="button" href="{% url 'web:team-invite' %}">Invite teammate</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-heading">
+    <h2>Members</h2>
+    <span class="muted">{{ rows.paginator.count }} members</span>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Member</th><th>Role</th><th>Joined</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for member in rows %}
+          <tr>
+            <td>
+              <strong>{{ member.user.get_full_name }}</strong>
+              <small>{{ member.user.email }}</small>
+            </td>
+            <td>
+              {{ member.get_role_display }}
+              {% if member.user_id == organization.owner_id %}<small>Primary owner</small>{% endif %}
+            </td>
+            <td>{{ member.created_at|date:"M j, Y" }}</td>
+            <td>
+              {% if capabilities.members_manage and member.user_id != organization.owner_id %}
+                <div class="row-actions">
+                  <a href="{% url 'web:member-action' member.pk 'role' %}">Change role</a>
+                  <a class="danger-link" href="{% url 'web:member-action' member.pk 'remove' %}">Remove</a>
+                </div>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% include "includes/pagination.html" %}
+
+{% if capabilities.members_manage %}
+  <section class="panel">
+    <div class="panel-heading"><h2>Pending invitations</h2></div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Email</th><th>Role</th><th>Expires</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          {% for invitation in invitations %}
+            <tr>
+              <td>{{ invitation.email }}</td>
+              <td>{{ invitation.get_role_display }}</td>
+              <td>{{ invitation.expires_at|date:"M j, H:i T" }}</td>
+              <td>
+                <a class="danger-link" href="{% url 'web:member-action' invitation.pk 'revoke-invitation' %}">Revoke</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4">No pending invitations.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endif %}
+{% endblock %}

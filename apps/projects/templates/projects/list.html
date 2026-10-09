@@ -1,0 +1,78 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}<p class="muted">Organize services by application, team, or environment.</p>{% endblock %}
+
+{% block actions %}
+  {% if capabilities.project_create %}
+    <a class="button" href="{% url 'web:project-new' %}">{% icon "plus" %}Create project</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<form class="list-filters" method="get">
+  <label class="search-label">
+    Search projects
+    <input type="search" name="search" value="{{ request.GET.search }}" placeholder="Project name">
+  </label>
+  <label>
+    Status
+    <select name="status">
+      <option value="active" {% if selected_status == "active" %}selected{% endif %}>Active</option>
+      <option value="archived" {% if selected_status == "archived" %}selected{% endif %}>Archived</option>
+      <option value="all" {% if selected_status == "all" %}selected{% endif %}>All projects</option>
+    </select>
+  </label>
+  <button class="button secondary">Filter</button>
+</form>
+
+<section class="panel">
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Projects">
+    <table>
+      <thead>
+        <tr><th>Project</th><th>Environment</th><th>Monitors</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for item in rows %}
+          <tr>
+            <td>
+              {% if item.status == "active" %}
+                <a class="row-title" href="{% url 'web:overview' %}?organization={{ organization.pk }}&amp;project={{ item.pk }}">{{ item.name }}</a>
+              {% else %}
+                <strong>{{ item.name }}</strong>
+              {% endif %}
+              <small class="wrap-cell">{{ item.description|default:"No description" }}</small>
+            </td>
+            <td>{{ item.environment|label }}</td>
+            <td>{{ item.monitor_count }}</td>
+            <td>{{ item.status|label }}</td>
+            <td>
+              <div class="row-actions">
+                {% if capabilities.project_edit %}
+                  <a href="{% url 'web:project-edit' item.pk %}">Edit</a>
+                {% endif %}
+                {% if capabilities.project_archive %}
+                  {% if item.status == "archived" %}
+                    <a href="{% url 'web:project-action' item.pk 'restore' %}">Restore</a>
+                  {% else %}
+                    <a class="danger-link" href="{% url 'web:project-action' item.pk 'archive' %}">Archive</a>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <h3>No projects found</h3>
+                <p>Create a project to group your monitors and configure alerts.</p>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% include "includes/pagination.html" %}
+{% endblock %}

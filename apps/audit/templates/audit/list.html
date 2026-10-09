@@ -1,0 +1,28 @@
+{% extends "dashboard_base.html" %}
+
+{% block subtitle %}<p class="muted">Changes and security events visible to your role.</p>{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Time</th><th>Action</th><th>Actor</th><th>Resource</th></tr>
+      </thead>
+      <tbody>
+        {% for entry in rows %}
+          <tr>
+            <td>{{ entry.created_at|date:"M j, H:i:s T" }}</td>
+            <td><code>{{ entry.action }}</code></td>
+            <td>{{ entry.actor_email|default:"System" }}</td>
+            <td>{{ entry.resource_type }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4">No audit entries.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% include "includes/pagination.html" %}
+{% endblock %}
