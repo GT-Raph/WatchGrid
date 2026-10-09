@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import uuid
 
 from django.conf import settings
@@ -69,6 +71,24 @@ def _merge_headers(existing: dict[str, str], incoming: dict[str, str] | None) ->
     return merged
 
 
+
+def _request_initial_checks() -> None:
+    """Prompt a first scheduled check after a monitor transaction commits.
+
+    The normal scheduler still handles routine checks. Network/broker errors
+    are logged; the pending check remains available to the next scheduler tick.
+    """
+    if not getattr(settings, "MONITOR_IMMEDIATE_CHECKS", True):
+        return
+    from apps.checks.tasks import dispatch_due_monitors
+
+    try:
+        dispatch_due_monitors.delay()
+    except Exception:
+        logging.getLogger("watchgrid.monitoring").exception(
+            "Could not dispatch immediate monitor checks; scheduler will retry"
+        )
+
 def create_monitor(*, actor, project, data: dict, request=None) -> Monitor:
     require_capability(actor, project.organization_id, "monitor.manage")
     if project.status != project.Status.ACTIVE:
@@ -92,6 +112,7 @@ def create_monitor(*, actor, project, data: dict, request=None) -> Monitor:
             )
     except IntegrityError as exc:
         raise Conflict("A monitor with this name already exists in the project.", code="NAME_TAKEN") from exc
+    transaction.on_commit(_request_initial_checks)
     return monitor
 
 
@@ -132,6 +153,8 @@ def update_monitor(*, actor, monitor: Monitor, data: dict, request=None) -> Moni
             )
     except IntegrityError as exc:
         raise Conflict("A monitor with this name already exists in the project.", code="NAME_TAKEN") from exc
+    if monitor.is_active and monitor.status == "unknown":
+        transaction.on_commit(_request_initial_checks)
     return monitor
 
 
@@ -186,6 +209,7 @@ def resume_monitor(*, actor, monitor: Monitor, request=None) -> Monitor:
             resource=monitor,
             request=request,
         )
+    transaction.on_commit(_request_initial_checks)
     return monitor
 
 

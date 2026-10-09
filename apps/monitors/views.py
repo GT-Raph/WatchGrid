@@ -53,7 +53,10 @@ def monitors(request):
         "Monitors",
         rows=rows,
         show_scope=True,
-        status_choices=Monitor.Status.choices,
+        status_choices=[
+            (code, "Checking…" if code == Monitor.Status.UNKNOWN else label)
+            for code, label in Monitor.Status.choices
+        ],
     )
 
 

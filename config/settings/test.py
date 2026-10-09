@@ -39,3 +39,6 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
 }
 
 LOGGING = {"version": 1, "disable_existing_loggers": False, "root": {"level": "CRITICAL"}}
+
+# The test suite controls scheduler dispatch explicitly.
+MONITOR_IMMEDIATE_CHECKS = False

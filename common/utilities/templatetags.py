@@ -10,6 +10,8 @@ register = template.Library()
 
 @register.filter
 def label(value):
+    if str(value).strip().lower() == "unknown":
+        return "Checking…"
     return str(value or "Unknown").replace("_", " ").capitalize()
 
 
